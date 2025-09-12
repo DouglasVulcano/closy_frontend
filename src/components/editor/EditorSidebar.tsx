@@ -16,7 +16,7 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Separator } from '@/components/ui/separator';
 import { Badge } from '@/components/ui/badge';
-import { useEditor } from '@/store/editor-store';
+import { useEditor } from '@/store/editor-hooks';
 import { ColorPicker } from './ColorPicker';
 import { FormFieldEditor } from './FormFieldEditor';
 import { useToast } from '@/hooks/use-toast';

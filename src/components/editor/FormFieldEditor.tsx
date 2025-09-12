@@ -9,7 +9,8 @@ import { Badge } from '@/components/ui/badge';
 import { Card } from '@/components/ui/card';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Separator } from '@/components/ui/separator';
-import { useEditor, FormField } from '@/store/editor-store';
+import { useEditor } from '@/store/editor-hooks';
+import { FormField } from '@/store/editor-store';
 
 const FIELD_TYPES = [
   { value: 'text', label: 'Texto', icon: Type },

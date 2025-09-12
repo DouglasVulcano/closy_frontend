@@ -1,46 +1,14 @@
 import { createContext, useContext, useReducer, ReactNode } from 'react';
+import {
+  FormField,
+  CampaignData,
+  EditorState,
+  EditorAction,
+  EditorContextType
+} from './editor-types';
 
-export interface FormField {
-  id: string;
-  type: 'text' | 'email' | 'phone' | 'textarea' | 'select' | 'checkbox';
-  label: string;
-  placeholder?: string;
-  required: boolean;
-  options?: string[];
-  validation?: {
-    minLength?: number;
-    maxLength?: number;
-    pattern?: string;
-  };
-}
-
-export interface CampaignData {
-  title: string;
-  description: string;
-  backgroundColor: string;
-  textColor: string;
-  accentColor: string;
-  backgroundImage?: string;
-  logo?: string;
-  formFields: FormField[];
-}
-
-interface EditorState {
-  campaign: CampaignData;
-  selectedElement: string | null;
-  previewMode: boolean;
-  isDirty: boolean;
-}
-
-type EditorAction = 
-  | { type: 'UPDATE_CAMPAIGN'; payload: Partial<CampaignData> }
-  | { type: 'SELECT_ELEMENT'; payload: string | null }
-  | { type: 'TOGGLE_PREVIEW' }
-  | { type: 'ADD_FORM_FIELD'; payload: FormField }
-  | { type: 'UPDATE_FORM_FIELD'; payload: { id: string; field: Partial<FormField> } }
-  | { type: 'REMOVE_FORM_FIELD'; payload: string }
-  | { type: 'REORDER_FORM_FIELDS'; payload: FormField[] }
-  | { type: 'MARK_CLEAN' };
+// Re-export types for backward compatibility
+export type { FormField, CampaignData } from './editor-types';
 
 const initialState: EditorState = {
   campaign: {
@@ -147,19 +115,9 @@ const editorReducer = (state: EditorState, action: EditorAction): EditorState =>
   }
 };
 
-interface EditorContextType {
-  state: EditorState;
-  updateCampaign: (data: Partial<CampaignData>) => void;
-  selectElement: (id: string | null) => void;
-  togglePreview: () => void;
-  addFormField: (field: FormField) => void;
-  updateFormField: (id: string, field: Partial<FormField>) => void;
-  removeFormField: (id: string) => void;
-  reorderFormFields: (fields: FormField[]) => void;
-  markClean: () => void;
-}
 
-const EditorContext = createContext<EditorContextType | undefined>(undefined);
+
+export const EditorContext = createContext<EditorContextType | undefined>(undefined);
 
 export const EditorProvider = ({ children }: { children: ReactNode }) => {
   const [state, dispatch] = useReducer(editorReducer, initialState);
@@ -213,12 +171,4 @@ export const EditorProvider = ({ children }: { children: ReactNode }) => {
       {children}
     </EditorContext.Provider>
   );
-};
-
-export const useEditor = () => {
-  const context = useContext(EditorContext);
-  if (context === undefined) {
-    throw new Error('useEditor must be used within an EditorProvider');
-  }
-  return context;
 };
