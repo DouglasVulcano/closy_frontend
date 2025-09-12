@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Settings, Palette, Type, X, ChevronUp, Image } from 'lucide-react';
+import { Settings, Palette, Type, X, ChevronUp, Image, Save } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
@@ -9,6 +9,7 @@ import { Separator } from '@/components/ui/separator';
 import { useEditor } from '@/store/editor-hooks';
 import { FormFieldEditor } from './FormFieldEditor';
 import { ColorPicker } from './ColorPicker';
+import { useToast } from '@/hooks/use-toast';
 
 interface FloatingMenuProps {
   isOpen: boolean;
@@ -45,9 +46,18 @@ const TABS = {
 };
 
 export const FloatingMenu = ({ isOpen, onToggle }: FloatingMenuProps) => {
-  const { state, updateCampaign } = useEditor();
+  const { state, updateCampaign, markClean } = useEditor();
   const [activeTab, setActiveTab] = useState<TabType>('content');
   const [startY, setStartY] = useState<number | null>(null);
+  const { toast } = useToast();
+
+  const handleSave = () => {
+    markClean();
+    toast({
+      title: "Projeto salvo!",
+      description: "Suas alterações foram salvas com sucesso.",
+    });
+  };
 
   const handleColorChange = (colorType: string, color: string) => {
     updateCampaign({ [colorType]: color });
@@ -271,14 +281,24 @@ export const FloatingMenu = ({ isOpen, onToggle }: FloatingMenuProps) => {
         <div className="border-b border-border px-4 pb-3">
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-xl font-bold text-foreground">Editor</h2>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={onToggle}
-              className="h-8 w-8 p-0"
-            >
-              <X className="h-4 w-4" />
-            </Button>
+            <div className="flex items-center gap-2">
+              <Button
+                size="sm"
+                onClick={handleSave}
+                className="gap-2 text-xs"
+              >
+                <Save className="h-3 w-3" />
+                Salvar
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={onToggle}
+                className="h-8 w-8 p-0"
+              >
+                <X className="h-4 w-4" />
+              </Button>
+            </div>
           </div>
 
           {/* Navigation Tabs */}
@@ -289,35 +309,34 @@ export const FloatingMenu = ({ isOpen, onToggle }: FloatingMenuProps) => {
 
               return (
                 <button
-                  key={tab.id}
-                  onClick={() => setActiveTab(tab.id)}
-                  className={`
-                    flex-1 flex items-center justify-center gap-2 px-3 py-2.5 rounded-md text-sm font-medium transition-all duration-200
-                    ${isActive
-                      ? 'bg-background text-foreground shadow-sm'
-                      : 'text-muted-foreground hover:text-foreground hover:bg-background/50'
-                    }
-                  `}
-                >
-                  {/* Indicador de aba ativa */}
-                  {isActive && (
-                    <div className={`w-2 h-2 rounded-full ${tab.color}`} />
-                  )}
-
-                  {/* Ícone com efeito de escala */}
-                  <Icon className={`h-4 w-4 transition-transform ${isActive ? 'scale-110' : 'scale-100'
+                    key={tab.id}
+                    onClick={() => setActiveTab(tab.id)}
+                    className={`
+                      flex-1 flex flex-col items-center justify-center gap-1 px-2 py-2.5 rounded-md text-sm font-medium transition-all duration-200 relative
+                      ${
+                        isActive
+                          ? 'bg-background text-foreground shadow-sm'
+                          : 'text-muted-foreground hover:text-foreground hover:bg-background/50'
+                      }
+                    `}
+                  >
+                    {/* Indicador de aba ativa */}
+                    {isActive && (
+                      <div className={`absolute top-1 w-2 h-2 rounded-full ${tab.color}`} />
+                    )}
+                    
+                    {/* Ícone com efeito de escala */}
+                    <Icon className={`h-5 w-5 transition-transform ${
+                      isActive ? 'scale-110' : 'scale-100'
                     }`} />
-
-                  {/* Label truncado */}
-                  <span className="truncate">{tab.label}</span>
-
-                  {/* Badge para formulário */}
-                  {tab.id === 'form' && (
-                    <Badge variant="secondary" className="text-xs ml-1">
-                      {state.campaign.formFields.length}
-                    </Badge>
-                  )}
-                </button>
+                    
+                    {/* Badge para formulário */}
+                    {tab.id === 'form' && (
+                      <Badge variant="secondary" className="text-xs absolute -top-1 -right-1 h-4 w-4 p-0 flex items-center justify-center">
+                        {state.campaign.formFields.length}
+                      </Badge>
+                    )}
+                  </button>
               );
             })}
           </div>

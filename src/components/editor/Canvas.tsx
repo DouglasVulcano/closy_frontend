@@ -1,11 +1,12 @@
 import { useState, useEffect } from 'react';
-import { Smartphone, Monitor, Tablet, ArrowLeft } from 'lucide-react';
+import { Smartphone, Monitor, Tablet, ArrowLeft, Save } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { useEditor } from '@/store/editor-hooks';
 import { LeadCapturePreview } from './LeadCapturePreview';
 import { useNavigate } from 'react-router-dom';
+import { useToast } from '@/hooks/use-toast';
 
 type ViewportSize = 'mobile' | 'tablet' | 'desktop';
 
@@ -16,10 +17,19 @@ const VIEWPORTS = {
 };
 
 export const Canvas = () => {
-  const { state } = useEditor();
-  const [viewport, setViewport] = useState<ViewportSize>('mobile');
+  const { state, togglePreview, markClean } = useEditor();
+  const [viewport, setViewport] = useState<ViewportSize>('desktop');
   const [isMobile, setIsMobile] = useState(false);
   const navigate = useNavigate();
+  const { toast } = useToast();
+
+  const handleSave = () => {
+    markClean();
+    toast({
+      title: "Projeto salvo!",
+      description: "Suas alterações foram salvas com sucesso.",
+    });
+  };
 
   useEffect(() => {
     const checkMobile = () => {
@@ -82,15 +92,25 @@ export const Canvas = () => {
       {isMobile && (
         <div className="border-b border-border bg-toolbar-bg px-4 py-3">
           <div className="flex items-center justify-between">
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => navigate('/campaigns')}
-              className="gap-2 p-2"
-            >
-              <ArrowLeft className="h-4 w-4" />
-              Voltar
-            </Button>
+            <div className="flex items-center gap-2">
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => navigate('/campaigns')}
+                className="gap-2 p-2"
+              >
+                <ArrowLeft className="h-4 w-4" />
+                Voltar
+              </Button>
+              <Button
+                size="sm"
+                onClick={handleSave}
+                className="gap-2 text-xs"
+              >
+                <Save className="h-3 w-3" />
+                Salvar
+              </Button>
+            </div>
 
             <Badge variant="secondary" className="gap-2 text-xs">
               <div className="w-2 h-2 bg-success rounded-full animate-pulse"></div>
