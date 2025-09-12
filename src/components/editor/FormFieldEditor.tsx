@@ -76,13 +76,13 @@ export const FormFieldEditor = () => {
       <div className="space-y-2">
         {state.campaign.formFields.map((field, index) => {
           const Icon = getFieldIcon(field.type);
-          
+
           return (
             <Card key={field.id} className="p-3 border-border">
               <div className="flex items-center gap-3">
                 <GripVertical className="h-4 w-4 text-muted-foreground cursor-move" />
                 <Icon className="h-4 w-4 text-primary" />
-                
+
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2">
                     <span className="font-medium text-sm truncate">{field.label}</span>
@@ -94,7 +94,7 @@ export const FormFieldEditor = () => {
                     {FIELD_TYPES.find(t => t.value === field.type)?.label}
                   </div>
                 </div>
-                
+
                 <div className="flex gap-1">
                   <Button
                     variant="ghost"
@@ -127,12 +127,12 @@ export const FormFieldEditor = () => {
             Adicionar Campo
           </Button>
         </DialogTrigger>
-        
+
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle>Novo Campo do Formulário</DialogTitle>
           </DialogHeader>
-          
+
           <div className="space-y-4">
             <div className="space-y-2">
               <Label htmlFor="field-type">Tipo do Campo</Label>
@@ -206,7 +206,7 @@ export const FormFieldEditor = () => {
           <DialogHeader>
             <DialogTitle>Editar Campo</DialogTitle>
           </DialogHeader>
-          
+
           {editingField && (
             <div className="space-y-4">
               <div className="space-y-2">

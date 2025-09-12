@@ -251,8 +251,8 @@ export const MobileSidebar = ({ isOpen, onClose }: MobileSidebarProps) => {
                                 key={tab.id}
                                 onClick={() => setActiveTab(tab.id)}
                                 className={`flex-1 flex flex-col items-center gap-1 py-3 px-1 text-xs font-medium transition-all duration-200 relative ${isActive
-                                        ? 'text-primary bg-background/80'
-                                        : 'text-muted-foreground hover:text-foreground hover:bg-muted/50'
+                                    ? 'text-primary bg-background/80'
+                                    : 'text-muted-foreground hover:text-foreground hover:bg-muted/50'
                                     }`}
                             >
                                 {isActive && (

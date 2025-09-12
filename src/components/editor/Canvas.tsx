@@ -17,17 +17,21 @@ const VIEWPORTS = {
 };
 
 export const Canvas = () => {
-  const { state, togglePreview, markClean } = useEditor();
+  const { state, togglePreview, markClean, exportToJson } = useEditor();
   const [viewport, setViewport] = useState<ViewportSize>('desktop');
   const [isMobile, setIsMobile] = useState(false);
   const navigate = useNavigate();
   const { toast } = useToast();
 
   const handleSave = () => {
+    const jsonData = exportToJson();
+    console.log('📄 Configurações da Campanha (JSON):', jsonData);
+    console.log('📊 Objeto da Campanha:', JSON.parse(jsonData));
+
     markClean();
     toast({
       title: "Projeto salvo!",
-      description: "Suas alterações foram salvas com sucesso.",
+      description: "Suas alterações foram salvas com sucesso. Verifique o console para ver o JSON.",
     });
   };
 
@@ -81,7 +85,7 @@ export const Canvas = () => {
                 className="gap-2"
               >
                 <ArrowLeft className="h-4 w-4" />
-                Voltar para Campanhas
+                Voltar
               </Button>
             </div>
           </div>
@@ -122,8 +126,8 @@ export const Canvas = () => {
 
       {/* Canvas Area */}
       <div className={`flex-1 overflow-auto ${isMobile
-          ? 'p-0'
-          : 'flex items-center justify-center p-6'
+        ? 'p-0'
+        : 'flex items-center justify-center p-6'
         }`}>
         {isMobile ? (
           // Mobile: Full screen preview

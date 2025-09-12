@@ -33,11 +33,11 @@ export const LeadCapturePreview = ({ campaign, viewport, isPreview = false }: Le
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (isPreview) {
       // Simulate form submission in preview mode
       setIsSubmitting(true);
-      
+
       setTimeout(() => {
         setIsSubmitting(false);
         setIsSubmitted(true);
@@ -45,13 +45,13 @@ export const LeadCapturePreview = ({ campaign, viewport, isPreview = false }: Le
           title: "Sucesso!",
           description: "Lead capturado com sucesso (simulação)",
         });
-        
+
         setTimeout(() => {
           setIsSubmitted(false);
           setFormData({});
         }, 3000);
       }, 1500);
-      
+
       return;
     }
 
@@ -77,7 +77,7 @@ export const LeadCapturePreview = ({ campaign, viewport, isPreview = false }: Le
     try {
       // Here you would send the data to your backend
       console.log('Form submission:', formData);
-      
+
       setTimeout(() => {
         setIsSubmitting(false);
         setIsSubmitted(true);
@@ -116,7 +116,7 @@ export const LeadCapturePreview = ({ campaign, viewport, isPreview = false }: Le
             onChange={(e) => handleInputChange(field.id, e.target.value)}
           />
         );
-      
+
       case 'phone':
         return (
           <Input
@@ -126,7 +126,7 @@ export const LeadCapturePreview = ({ campaign, viewport, isPreview = false }: Le
             onChange={(e) => handleInputChange(field.id, e.target.value)}
           />
         );
-      
+
       case 'textarea':
         return (
           <Textarea
@@ -137,7 +137,7 @@ export const LeadCapturePreview = ({ campaign, viewport, isPreview = false }: Le
             className="focus-ring resize-none"
           />
         );
-      
+
       case 'select':
         return (
           <Select
@@ -156,7 +156,7 @@ export const LeadCapturePreview = ({ campaign, viewport, isPreview = false }: Le
             </SelectContent>
           </Select>
         );
-      
+
       case 'checkbox':
         return (
           <div className="flex items-start space-x-3 py-2">
@@ -166,7 +166,7 @@ export const LeadCapturePreview = ({ campaign, viewport, isPreview = false }: Le
               onCheckedChange={(checked) => handleInputChange(field.id, !!checked)}
               className="mt-1"
             />
-            <label 
+            <label
               htmlFor={field.id}
               className="text-sm leading-5 cursor-pointer"
               style={{ color: campaign.textColor }}
@@ -175,7 +175,7 @@ export const LeadCapturePreview = ({ campaign, viewport, isPreview = false }: Le
             </label>
           </div>
         );
-      
+
       default:
         return null;
     }
@@ -183,7 +183,7 @@ export const LeadCapturePreview = ({ campaign, viewport, isPreview = false }: Le
 
   if (isSubmitted) {
     return (
-      <div 
+      <div
         className="min-h-full flex items-center justify-center p-6"
         style={{ backgroundColor: campaign.backgroundColor }}
       >
@@ -192,20 +192,20 @@ export const LeadCapturePreview = ({ campaign, viewport, isPreview = false }: Le
             <div className="mx-auto w-16 h-16 bg-success rounded-full flex items-center justify-center">
               <CheckCircle2 className="h-8 w-8 text-white" />
             </div>
-            <h2 
+            <h2
               className="text-2xl font-bold"
               style={{ color: campaign.textColor }}
             >
               Obrigado!
             </h2>
-            <p 
+            <p
               className="text-base opacity-90"
               style={{ color: campaign.textColor }}
             >
-              Recebemos suas informações e entraremos em contato em breve.
+              {campaign.successMessage || 'Recebemos suas informações e entraremos em contato em breve.'}
             </p>
           </div>
-          
+
           {isPreview && (
             <Badge variant="secondary" className="mt-4">
               Modo Preview
@@ -217,21 +217,21 @@ export const LeadCapturePreview = ({ campaign, viewport, isPreview = false }: Le
   }
 
   return (
-    <div 
+    <div
       className="min-h-full"
       style={{ backgroundColor: campaign.backgroundColor }}
     >
       {/* Campaign Header */}
       <div className="px-6 py-12 text-center">
         <div className="max-w-2xl mx-auto space-y-6">
-          <h1 
+          <h1
             className={`text-4xl md:text-5xl font-bold leading-tight ${viewport === 'mobile' ? 'text-3xl' : ''}`}
             style={{ color: campaign.textColor }}
           >
             {campaign.title}
           </h1>
-          
-          <p 
+
+          <p
             className={`text-lg md:text-xl leading-relaxed opacity-90 ${viewport === 'mobile' ? 'text-base' : ''}`}
             style={{ color: campaign.textColor }}
           >
@@ -245,24 +245,24 @@ export const LeadCapturePreview = ({ campaign, viewport, isPreview = false }: Le
         <Card className="max-w-md mx-auto p-6 glass">
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="text-center mb-6">
-              <h3 
+              <h3
                 className="text-xl font-semibold mb-2"
                 style={{ color: campaign.textColor }}
               >
-                Cadastre-se agora
+                {campaign.formHeader || 'Cadastre-se agora'}
               </h3>
-              <p 
+              <p
                 className="text-sm opacity-80"
                 style={{ color: campaign.textColor }}
               >
-                Preencha os dados abaixo
+                {campaign.formSubtitle || 'Preencha os dados abaixo'}
               </p>
             </div>
 
             {campaign.formFields.map((field) => (
               <div key={field.id} className="space-y-2">
                 {field.type !== 'checkbox' && (
-                  <label 
+                  <label
                     htmlFor={field.id}
                     className="block text-sm font-medium"
                     style={{ color: campaign.textColor }}
@@ -281,7 +281,7 @@ export const LeadCapturePreview = ({ campaign, viewport, isPreview = false }: Le
               type="submit"
               disabled={isSubmitting}
               className="w-full mt-6 font-semibold py-3 transition-all hover-lift"
-              style={{ 
+              style={{
                 backgroundColor: campaign.accentColor,
                 color: 'white',
                 borderColor: campaign.accentColor
@@ -295,7 +295,7 @@ export const LeadCapturePreview = ({ campaign, viewport, isPreview = false }: Le
               ) : (
                 <>
                   <Send className="mr-2 h-4 w-4" />
-                  Enviar Dados
+                  {campaign.submitButtonLabel || 'Enviar Dados'}
                 </>
               )}
             </Button>
@@ -313,7 +313,7 @@ export const LeadCapturePreview = ({ campaign, viewport, isPreview = false }: Le
 
       {/* Footer */}
       <div className="px-6 py-8 text-center">
-        <p 
+        <p
           className="text-sm opacity-60"
           style={{ color: campaign.textColor }}
         >

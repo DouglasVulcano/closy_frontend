@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Settings, Palette, Type, X, ChevronUp, Image, Save } from 'lucide-react';
+import { Settings, Palette, Type, X, ChevronUp, Image, Save, Upload } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
@@ -46,16 +46,64 @@ const TABS = {
 };
 
 export const FloatingMenu = ({ isOpen, onToggle }: FloatingMenuProps) => {
-  const { state, updateCampaign, markClean } = useEditor();
+  const { state, updateCampaign, markClean, exportToJson, loadFromJson } = useEditor();
   const [activeTab, setActiveTab] = useState<TabType>('content');
   const [startY, setStartY] = useState<number | null>(null);
   const { toast } = useToast();
 
   const handleSave = () => {
+    const jsonData = exportToJson();
+    console.log('📄 Configurações da Campanha (JSON):', jsonData);
+    console.log('📊 Objeto da Campanha:', JSON.parse(jsonData));
+    
     markClean();
     toast({
       title: "Projeto salvo!",
-      description: "Suas alterações foram salvas com sucesso.",
+      description: "Suas alterações foram salvas com sucesso. Verifique o console para ver o JSON.",
+    });
+  };
+
+  const handleLoadMockData = () => {
+    const mockData = {
+      title: 'Campanha de Exemplo Carregada',
+      description: 'Esta é uma campanha carregada a partir de dados JSON mockados. Demonstra como o sistema pode restaurar configurações salvas.',
+      backgroundColor: '#e8f4fd',
+      textColor: '#1e3a8a',
+      accentColor: '#3b82f6',
+      formHeader: 'Inscreva-se Agora',
+      formSubtitle: 'Complete o formulário para receber novidades',
+      submitButtonLabel: 'Quero me Inscrever',
+      successMessage: 'Obrigado por se inscrever! Você receberá nossas novidades em breve.',
+      formFields: [
+        {
+          id: '1',
+          type: 'text' as const,
+          label: 'Nome Completo',
+          placeholder: 'Digite seu nome completo',
+          required: true,
+        },
+        {
+          id: '2',
+          type: 'email' as const,
+          label: 'E-mail Profissional',
+          placeholder: 'seu.email@empresa.com',
+          required: true,
+        },
+        {
+          id: '3',
+          type: 'phone' as const,
+          label: 'Telefone',
+          placeholder: '(11) 99999-9999',
+          required: false,
+        }
+      ]
+    };
+    
+    loadFromJson(mockData);
+    console.log('📥 Dados Mockados Carregados:', mockData);
+    toast({
+      title: "Dados carregados!",
+      description: "Configurações de exemplo foram carregadas com sucesso.",
     });
   };
 
@@ -211,18 +259,38 @@ export const FloatingMenu = ({ isOpen, onToggle }: FloatingMenuProps) => {
       case 'settings':
         return (
           <div className="space-y-4">
-            <h3 className="text-lg font-semibold text-foreground">Configurações Avançadas</h3>
+            <h3 className="text-lg font-semibold text-foreground">Configurações do Formulário</h3>
             <p className="text-sm text-muted-foreground mb-4">
-              Ajuste configurações avançadas do formulário.
+              Configure os textos e mensagens do formulário.
             </p>
             <div className="space-y-4">
               <div className="space-y-2">
-                <Label>URL Personalizada</Label>
+                <Label>Header do Formulário</Label>
                 <Input
-                  placeholder="minha-campanha"
+                  value={state.campaign.formHeader || ''}
+                  onChange={(e) => handleContentUpdate('formHeader', e.target.value)}
+                  placeholder="Cadastre-se agora"
                   className="focus-ring"
-                  value={state.campaign.customUrl || ''}
-                  onChange={(e) => handleContentUpdate('customUrl', e.target.value)}
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label>Subtítulo do Formulário</Label>
+                <Input
+                  value={state.campaign.formSubtitle || ''}
+                  onChange={(e) => handleContentUpdate('formSubtitle', e.target.value)}
+                  placeholder="Preencha os dados abaixo"
+                  className="focus-ring"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label>Label do Botão</Label>
+                <Input
+                  value={state.campaign.submitButtonLabel || ''}
+                  onChange={(e) => handleContentUpdate('submitButtonLabel', e.target.value)}
+                  placeholder="Enviar Dados"
+                  className="focus-ring"
                 />
               </div>
 
@@ -309,34 +377,32 @@ export const FloatingMenu = ({ isOpen, onToggle }: FloatingMenuProps) => {
 
               return (
                 <button
-                    key={tab.id}
-                    onClick={() => setActiveTab(tab.id)}
-                    className={`
+                  key={tab.id}
+                  onClick={() => setActiveTab(tab.id)}
+                  className={`
                       flex-1 flex flex-col items-center justify-center gap-1 px-2 py-2.5 rounded-md text-sm font-medium transition-all duration-200 relative
-                      ${
-                        isActive
-                          ? 'bg-background text-foreground shadow-sm'
-                          : 'text-muted-foreground hover:text-foreground hover:bg-background/50'
-                      }
+                      ${isActive
+                      ? 'bg-background text-foreground shadow-sm'
+                      : 'text-muted-foreground hover:text-foreground hover:bg-background/50'
+                    }
                     `}
-                  >
-                    {/* Indicador de aba ativa */}
-                    {isActive && (
-                      <div className={`absolute top-1 w-2 h-2 rounded-full ${tab.color}`} />
-                    )}
-                    
-                    {/* Ícone com efeito de escala */}
-                    <Icon className={`h-5 w-5 transition-transform ${
-                      isActive ? 'scale-110' : 'scale-100'
+                >
+                  {/* Indicador de aba ativa */}
+                  {isActive && (
+                    <div className={`absolute top-1 w-2 h-2 rounded-full ${tab.color}`} />
+                  )}
+
+                  {/* Ícone com efeito de escala */}
+                  <Icon className={`h-5 w-5 transition-transform ${isActive ? 'scale-110' : 'scale-100'
                     }`} />
-                    
-                    {/* Badge para formulário */}
-                    {tab.id === 'form' && (
-                      <Badge variant="secondary" className="text-xs absolute -top-1 -right-1 h-4 w-4 p-0 flex items-center justify-center">
-                        {state.campaign.formFields.length}
-                      </Badge>
-                    )}
-                  </button>
+
+                  {/* Badge para formulário */}
+                  {tab.id === 'form' && (
+                    <Badge variant="secondary" className="text-xs absolute -top-1 -right-1 h-4 w-4 p-0 flex items-center justify-center">
+                      {state.campaign.formFields.length}
+                    </Badge>
+                  )}
+                </button>
               );
             })}
           </div>

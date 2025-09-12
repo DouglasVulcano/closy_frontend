@@ -259,13 +259,40 @@ export const EditorSidebar = () => {
             {expandedSections.settings && (
               <div className="p-4 pt-0 space-y-4">
                 <div className="space-y-2">
-                  <Label>URL Personalizada</Label>
-                  <Input placeholder="minha-campanha" className="focus-ring" />
+                  <Label>Header do Formulário</Label>
+                  <Input
+                    value={state.campaign.formHeader || ''}
+                    onChange={(e) => handleContentUpdate('formHeader', e.target.value)}
+                    placeholder="Cadastre-se agora"
+                    className="focus-ring"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label>Subtítulo do Formulário</Label>
+                  <Input
+                    value={state.campaign.formSubtitle || ''}
+                    onChange={(e) => handleContentUpdate('formSubtitle', e.target.value)}
+                    placeholder="Preencha os dados abaixo"
+                    className="focus-ring"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label>Label do Botão</Label>
+                  <Input
+                    value={state.campaign.submitButtonLabel || ''}
+                    onChange={(e) => handleContentUpdate('submitButtonLabel', e.target.value)}
+                    placeholder="Enviar Dados"
+                    className="focus-ring"
+                  />
                 </div>
 
                 <div className="space-y-2">
                   <Label>Mensagem de Sucesso</Label>
                   <Textarea
+                    value={state.campaign.successMessage || ''}
+                    onChange={(e) => handleContentUpdate('successMessage', e.target.value)}
                     placeholder="Obrigado! Entraremos em contato em breve."
                     rows={3}
                     className="focus-ring resize-none"

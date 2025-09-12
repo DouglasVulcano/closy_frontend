@@ -17,6 +17,10 @@ const initialState: EditorState = {
     backgroundColor: '#f8f9ff',
     textColor: '#2d1b69',
     accentColor: '#8b7cf8',
+    formHeader: 'Cadastre-se agora',
+    formSubtitle: 'Preencha os dados abaixo',
+    submitButtonLabel: 'Enviar Dados',
+    successMessage: 'Obrigado! Entraremos em contato em breve.',
     formFields: [
       {
         id: '1',
@@ -47,19 +51,19 @@ const editorReducer = (state: EditorState, action: EditorAction): EditorState =>
         campaign: { ...state.campaign, ...action.payload },
         isDirty: true,
       };
-    
+
     case 'SELECT_ELEMENT':
       return {
         ...state,
         selectedElement: action.payload,
       };
-    
+
     case 'TOGGLE_PREVIEW':
       return {
         ...state,
         previewMode: !state.previewMode,
       };
-    
+
     case 'ADD_FORM_FIELD':
       return {
         ...state,
@@ -69,7 +73,7 @@ const editorReducer = (state: EditorState, action: EditorAction): EditorState =>
         },
         isDirty: true,
       };
-    
+
     case 'UPDATE_FORM_FIELD':
       return {
         ...state,
@@ -83,7 +87,7 @@ const editorReducer = (state: EditorState, action: EditorAction): EditorState =>
         },
         isDirty: true,
       };
-    
+
     case 'REMOVE_FORM_FIELD':
       return {
         ...state,
@@ -93,7 +97,7 @@ const editorReducer = (state: EditorState, action: EditorAction): EditorState =>
         },
         isDirty: true,
       };
-    
+
     case 'REORDER_FORM_FIELDS':
       return {
         ...state,
@@ -103,13 +107,20 @@ const editorReducer = (state: EditorState, action: EditorAction): EditorState =>
         },
         isDirty: true,
       };
-    
+
     case 'MARK_CLEAN':
       return {
         ...state,
         isDirty: false,
       };
-    
+
+    case 'LOAD_FROM_JSON':
+      return {
+        ...state,
+        campaign: action.payload,
+        isDirty: false,
+      };
+
     default:
       return state;
   }
@@ -154,6 +165,14 @@ export const EditorProvider = ({ children }: { children: ReactNode }) => {
     dispatch({ type: 'MARK_CLEAN' });
   };
 
+  const loadFromJson = (data: CampaignData) => {
+    dispatch({ type: 'LOAD_FROM_JSON', payload: data });
+  };
+
+  const exportToJson = (): string => {
+    return JSON.stringify(state.campaign, null, 2);
+  };
+
   return (
     <EditorContext.Provider
       value={{
@@ -166,6 +185,8 @@ export const EditorProvider = ({ children }: { children: ReactNode }) => {
         removeFormField,
         reorderFormFields,
         markClean,
+        loadFromJson,
+        exportToJson,
       }}
     >
       {children}

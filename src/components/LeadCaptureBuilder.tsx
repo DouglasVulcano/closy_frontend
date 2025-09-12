@@ -18,7 +18,7 @@ export const LeadCaptureBuilder = () => {
       <div className="flex h-screen bg-editor-bg overflow-hidden relative">
         {/* Desktop Sidebar */}
         {!isMobile && <EditorSidebar />}
-        
+
         {/* Mobile Floating Menu */}
         {isMobile && (
           <FloatingMenu
@@ -26,7 +26,7 @@ export const LeadCaptureBuilder = () => {
             onToggle={handleToggleFloatingMenu}
           />
         )}
-        
+
         {/* Canvas */}
         <Canvas />
       </div>
