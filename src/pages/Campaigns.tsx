@@ -44,7 +44,6 @@ import {
     DialogHeader,
     DialogTitle,
 } from '@/components/ui/dialog';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Link } from 'react-router-dom';
 
 type CampaignStatus = 'active' | 'paused' | 'draft' | 'completed';
@@ -167,11 +166,6 @@ const Campaigns = () => {
     const handleStatusChange = (campaignId: string, newStatus: CampaignStatus) => {
         // Aqui você implementaria a lógica para alterar o status da campanha
         console.log(`Alterando status da campanha ${campaignId} para ${newStatus}`);
-    };
-
-    const handleDuplicate = (campaignId: string) => {
-        // Aqui você implementaria a lógica para duplicar a campanha
-        console.log(`Duplicando campanha ${campaignId}`);
     };
 
     const handleDelete = (campaignId: string) => {
@@ -324,12 +318,6 @@ const Campaigns = () => {
                                 <CardHeader className="pb-3">
                                     <div className="flex items-start justify-between">
                                         <div className="flex items-center gap-3">
-                                            <Avatar className="h-10 w-10 rounded-lg">
-                                                <AvatarImage src={campaign.thumbnail} alt={campaign.name} />
-                                                <AvatarFallback className="rounded-lg bg-primary/10 text-primary">
-                                                    {campaign.name.substring(0, 2).toUpperCase()}
-                                                </AvatarFallback>
-                                            </Avatar>
                                             <div className="flex-1 min-w-0">
                                                 <CardTitle className="text-base truncate">{campaign.name}</CardTitle>
                                                 <Badge
@@ -361,10 +349,6 @@ const Campaigns = () => {
                                                         Editar
                                                     </Link>
                                                 </DropdownMenuItem>
-                                                <DropdownMenuItem onClick={() => handleDuplicate(campaign.id)}>
-                                                    <Copy className="mr-2 h-4 w-4" />
-                                                    Duplicar
-                                                </DropdownMenuItem>
                                                 <DropdownMenuSeparator />
                                                 {campaign.status === 'active' ? (
                                                     <DropdownMenuItem onClick={() => handleStatusChange(campaign.id, 'paused')}>
@@ -391,10 +375,6 @@ const Campaigns = () => {
                                 </CardHeader>
 
                                 <CardContent>
-                                    <CardDescription className="mb-4 line-clamp-2">
-                                        {campaign.description}
-                                    </CardDescription>
-
                                     <div className="grid grid-cols-3 gap-4 text-center">
                                         <div>
                                             <div className="text-lg font-semibold">{campaign.leads}</div>
@@ -473,7 +453,7 @@ const Campaigns = () => {
                         <Button variant="outline" onClick={handleModalClose}>
                             Cancelar
                         </Button>
-                        <Button 
+                        <Button
                             onClick={handleCreateCampaign}
                             disabled={!newCampaign.title.trim() || !newCampaign.url.trim()}
                         >

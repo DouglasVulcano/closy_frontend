@@ -63,12 +63,12 @@ export const Navbar = ({ onMobileMenuToggle, isMobileMenuOpen }: NavbarProps) =>
 
           {/* Logo */}
           <Link to="/" className="flex items-center space-x-2">
-            <div className="w-8 h-8 bg-gradient-primary rounded-lg flex items-center justify-center">
-              <span className="text-white font-bold text-sm">FS</span>
-            </div>
-            <span className="hidden sm:inline-block font-bold text-lg bg-gradient-primary bg-clip-text text-transparent">
-              Form Studio
-            </span>
+            <img
+              src="/closy.png"
+              alt="Closy"
+              width={75}
+              className="h-auto"
+            />
           </Link>
 
           {/* Desktop Navigation */}
