@@ -6,7 +6,6 @@ import {
     MoreHorizontal,
     Eye,
     Edit,
-    Copy,
     Trash2,
     Play,
     Pause,
@@ -14,9 +13,8 @@ import {
     Users,
     TrendingUp,
     Megaphone,
-    X
 } from 'lucide-react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
@@ -54,7 +52,6 @@ interface Campaign {
     description: string;
     status: CampaignStatus;
     leads: number;
-    views: number;
     conversion: number;
     createdAt: string;
     updatedAt: string;
@@ -68,7 +65,6 @@ const campaigns: Campaign[] = [
         description: 'Promoção especial para Black Friday com desconto de 50%',
         status: 'active',
         leads: 234,
-        views: 5600,
         conversion: 4.2,
         createdAt: '2024-01-15T10:00:00Z',
         updatedAt: '2024-01-15T14:30:00Z',
@@ -80,7 +76,6 @@ const campaigns: Campaign[] = [
         description: 'Webinar gratuito sobre estratégias de marketing digital',
         status: 'active',
         leads: 156,
-        views: 4100,
         conversion: 3.8,
         createdAt: '2024-01-12T09:00:00Z',
         updatedAt: '2024-01-14T16:20:00Z',
@@ -92,7 +87,6 @@ const campaigns: Campaign[] = [
         description: 'Download gratuito do nosso e-book sobre vendas',
         status: 'paused',
         leads: 89,
-        views: 4200,
         conversion: 2.1,
         createdAt: '2024-01-10T11:00:00Z',
         updatedAt: '2024-01-13T10:15:00Z',
@@ -104,7 +98,6 @@ const campaigns: Campaign[] = [
         description: 'Inscrições para o curso online de empreendedorismo',
         status: 'draft',
         leads: 0,
-        views: 0,
         conversion: 0,
         createdAt: '2024-01-08T15:00:00Z',
         updatedAt: '2024-01-08T15:00:00Z',
@@ -116,7 +109,6 @@ const campaigns: Campaign[] = [
         description: 'Cadastro para receber nossa newsletter semanal',
         status: 'completed',
         leads: 1200,
-        views: 15000,
         conversion: 8.0,
         createdAt: '2023-12-01T10:00:00Z',
         updatedAt: '2024-01-01T00:00:00Z',
@@ -247,21 +239,6 @@ const Campaigns = () => {
                         </p>
                     </CardContent>
                 </Card>
-
-                <Card>
-                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                        <CardTitle className="text-sm font-medium">Visualizações</CardTitle>
-                        <Eye className="h-4 w-4 text-muted-foreground" />
-                    </CardHeader>
-                    <CardContent>
-                        <div className="text-2xl font-bold">
-                            {(campaigns.reduce((sum, c) => sum + c.views, 0) / 1000).toFixed(1)}k
-                        </div>
-                        <p className="text-xs text-muted-foreground">
-                            Total de views
-                        </p>
-                    </CardContent>
-                </Card>
             </div>
 
             {/* Filters and Search */}
@@ -379,10 +356,6 @@ const Campaigns = () => {
                                         <div>
                                             <div className="text-lg font-semibold">{campaign.leads}</div>
                                             <div className="text-xs text-muted-foreground">Leads</div>
-                                        </div>
-                                        <div>
-                                            <div className="text-lg font-semibold">{campaign.views.toLocaleString()}</div>
-                                            <div className="text-xs text-muted-foreground">Views</div>
                                         </div>
                                         <div>
                                             <div className="text-lg font-semibold">{campaign.conversion}%</div>
