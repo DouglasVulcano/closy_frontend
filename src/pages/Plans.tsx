@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { apiService, Plan } from '../services/api';
+import { plansService } from '@/services';
+import type { Plan } from '@/types/api';
 import { Button } from '../components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/card';
 import { Badge } from '../components/ui/badge';
@@ -20,8 +21,8 @@ const Plans: React.FC = () => {
       if (!token) return;
       
       try {
-        const plansData = await apiService.getPlans(token);
-        setPlans(plansData.filter(plan => plan.active));
+        const plansData = await plansService.getActivePlans();
+        setPlans(plansData);
       } catch (err) {
         setError('Erro ao carregar planos');
         console.error('Error fetching plans:', err);
@@ -43,12 +44,11 @@ const Plans: React.FC = () => {
       const successUrl = `${window.location.origin}/dashboard`;
       const cancelUrl = `${window.location.origin}/plans?error=cancelled`;
       
-      const checkoutData = await apiService.createCheckout(
-        token,
-        planId,
-        successUrl,
-        cancelUrl
-      );
+      const checkoutData = await plansService.createCheckout({
+        plan_id: planId,
+        return_success_url: successUrl,
+        return_cancel_url: cancelUrl,
+      });
       
       // Redirecionar para o checkout do Stripe
       window.location.href = checkoutData.checkout_url;
