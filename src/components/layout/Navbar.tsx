@@ -1,8 +1,7 @@
 import { useState } from 'react';
-import { Link, useLocation } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
+import { useAuth } from '@/hooks/useAuth';
 import {
-  Menu,
-  X,
   BarChart3,
   Megaphone,
   Users,
@@ -25,6 +24,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
+import { BottomMenu } from './BottomMenu';
 
 const navigation = [
   { name: 'Dashboard', href: '/dashboard', icon: BarChart3 },
@@ -33,34 +33,35 @@ const navigation = [
   { name: 'Perfil', href: '/profile', icon: User },
 ];
 
-interface NavbarProps {
-  onMobileMenuToggle?: () => void;
-  isMobileMenuOpen?: boolean;
-}
-
-export const Navbar = ({ onMobileMenuToggle, isMobileMenuOpen }: NavbarProps) => {
+export const Navbar = () => {
   const location = useLocation();
+  const navigate = useNavigate();
+  const { user, logout } = useAuth();
   const [searchQuery, setSearchQuery] = useState('');
+
+  const handleLogout = async () => {
+    try {
+      await logout();
+      navigate('/login');
+    } catch (error) {
+      console.error('Logout error:', error);
+    }
+  };
+
+  const getUserInitials = (name: string) => {
+    return name
+      .split(' ')
+      .map(n => n[0])
+      .join('')
+      .toUpperCase()
+      .slice(0, 2);
+  };
 
   return (
     <>
       {/* Main Navbar */}
       <nav className="sticky top-0 z-50 w-full border-b border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
         <div className="container flex h-16 items-center px-4">
-          {/* Mobile menu button */}
-          <Button
-            variant="ghost"
-            size="icon"
-            className="md:hidden mr-2"
-            onClick={onMobileMenuToggle}
-          >
-            {isMobileMenuOpen ? (
-              <X className="h-5 w-5" />
-            ) : (
-              <Menu className="h-5 w-5" />
-            )}
-          </Button>
-
           {/* Logo */}
           <Link to="/" className="flex items-center space-x-2">
             <img
@@ -96,12 +97,7 @@ export const Navbar = ({ onMobileMenuToggle, isMobileMenuOpen }: NavbarProps) =>
 
           {/* Right side actions */}
           <div className="flex items-center space-x-2 ml-auto">
-            {/* Search button for mobile */}
-            <Button variant="ghost" size="icon" className="lg:hidden">
-              <Search className="h-5 w-5" />
-            </Button>
-
-            {/* Notifications */}
+            {/* Notifications 
             <Button variant="ghost" size="icon" className="relative">
               <Bell className="h-5 w-5" />
               <Badge
@@ -111,23 +107,26 @@ export const Navbar = ({ onMobileMenuToggle, isMobileMenuOpen }: NavbarProps) =>
                 3
               </Badge>
             </Button>
+            */}
 
             {/* User menu */}
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button variant="ghost" className="relative h-9 w-9 rounded-full">
                   <Avatar className="h-9 w-9">
-                    <AvatarImage src="/placeholder.svg" alt="@usuario" />
-                    <AvatarFallback className="bg-primary text-primary-foreground">U</AvatarFallback>
+                    <AvatarImage src="/placeholder.svg" alt={`@${user?.name}`} />
+                    <AvatarFallback className="bg-primary text-primary-foreground">
+                      {user?.name ? getUserInitials(user.name) : 'U'}
+                    </AvatarFallback>
                   </Avatar>
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent className="w-56" align="end" forceMount>
                 <DropdownMenuLabel className="font-normal">
                   <div className="flex flex-col space-y-1">
-                    <p className="text-sm font-medium leading-none">Usuário</p>
+                    <p className="text-sm font-medium leading-none">{user?.name || 'Usuário'}</p>
                     <p className="text-xs leading-none text-muted-foreground">
-                      usuario@exemplo.com
+                      {user?.email || 'usuario@exemplo.com'}
                     </p>
                   </div>
                 </DropdownMenuLabel>
@@ -145,7 +144,10 @@ export const Navbar = ({ onMobileMenuToggle, isMobileMenuOpen }: NavbarProps) =>
                   </Link>
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
-                <DropdownMenuItem className="cursor-pointer text-destructive focus:text-destructive">
+                <DropdownMenuItem
+                  className="cursor-pointer text-destructive focus:text-destructive"
+                  onClick={handleLogout}
+                >
                   <LogOut className="mr-2 h-4 w-4" />
                   <span>Sair</span>
                 </DropdownMenuItem>
@@ -155,80 +157,8 @@ export const Navbar = ({ onMobileMenuToggle, isMobileMenuOpen }: NavbarProps) =>
         </div>
       </nav>
 
-      {/* Mobile Navigation Menu */}
-      {isMobileMenuOpen && (
-        <div className="md:hidden fixed inset-0 top-16 z-40 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-          <div className="container px-4 py-6">
-            {/* Mobile Search */}
-            <div className="mb-6">
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                <Input
-                  type="search"
-                  placeholder="Buscar campanhas, leads..."
-                  className="pl-10"
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                />
-              </div>
-            </div>
-
-            {/* Mobile Navigation Links */}
-            <div className="space-y-2">
-              {navigation.map((item) => {
-                const Icon = item.icon;
-                const isActive = location.pathname === item.href;
-                return (
-                  <Link
-                    key={item.name}
-                    to={item.href}
-                    className={cn(
-                      'flex items-center space-x-3 px-4 py-3 rounded-lg text-base font-medium transition-colors',
-                      isActive
-                        ? 'bg-primary/10 text-primary'
-                        : 'text-muted-foreground hover:text-foreground hover:bg-muted'
-                    )}
-                    onClick={onMobileMenuToggle}
-                  >
-                    <Icon className="h-5 w-5" />
-                    <span>{item.name}</span>
-                  </Link>
-                );
-              })}
-            </div>
-
-            {/* Mobile User Section */}
-            <div className="mt-8 pt-6 border-t border-border">
-              <div className="flex items-center space-x-3 px-4 py-3">
-                <Avatar className="h-10 w-10">
-                  <AvatarImage src="/placeholder.svg" alt="@usuario" />
-                  <AvatarFallback className="bg-primary text-primary-foreground">U</AvatarFallback>
-                </Avatar>
-                <div className="flex-1">
-                  <p className="text-sm font-medium">Usuário</p>
-                  <p className="text-xs text-muted-foreground">usuario@exemplo.com</p>
-                </div>
-              </div>
-
-              <div className="mt-4 space-y-2">
-                <Link
-                  to="/settings"
-                  className="flex items-center space-x-3 px-4 py-3 rounded-lg text-base font-medium text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
-                  onClick={onMobileMenuToggle}
-                >
-                  <Settings className="h-5 w-5" />
-                  <span>Configurações</span>
-                </Link>
-
-                <button className="flex items-center space-x-3 px-4 py-3 rounded-lg text-base font-medium text-destructive hover:bg-destructive/10 transition-colors w-full text-left">
-                  <LogOut className="h-5 w-5" />
-                  <span>Sair</span>
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
+      {/* Bottom Menu for Mobile */}
+      <BottomMenu />
     </>
   );
 };

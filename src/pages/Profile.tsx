@@ -1,4 +1,7 @@
 import { useState } from 'react';
+import { useAuth } from '@/hooks/useAuth';
+import { useNavigate } from 'react-router-dom';
+import { useToast } from '@/hooks/use-toast';
 import {
   User,
   Camera,
@@ -57,7 +60,7 @@ interface UserProfile {
   website?: string;
   avatar?: string;
   joinedAt: string;
-  plan: 'free' | 'pro' | 'enterprise';
+  plan: 'free' | 'starter' | 'pro' | 'enterprise';
   campaignsCount: number;
   leadsCount: number;
 }
@@ -78,23 +81,40 @@ interface SecuritySettings {
 }
 
 const Profile = () => {
+  const { user, updateUser, deleteUser, getPortalUrl } = useAuth();
+  const navigate = useNavigate();
+  const { toast } = useToast();
   const [isEditing, setIsEditing] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [activeTab, setActiveTab] = useState('profile');
+  const [isUpdating, setIsUpdating] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
+
+  // Mapear role para plano
+  const getPlanFromRole = (role: string) => {
+    switch (role) {
+      case 'STARTER':
+        return 'starter';
+      case 'PRO':
+        return 'pro';
+      default:
+        return 'free';
+    }
+  };
 
   const [profile, setProfile] = useState<UserProfile>({
-    id: '1',
-    name: 'Douglas Silva',
-    email: 'douglas@exemplo.com',
-    phone: '+55 11 99999-9999',
-    bio: 'Especialista em marketing digital e captação de leads. Apaixonado por criar campanhas que convertem.',
-    location: 'São Paulo, SP',
-    website: 'https://douglassilva.com',
+    id: user?.id.toString() || '1',
+    name: user?.name || '',
+    email: user?.email || '',
+    phone: user?.celular || '',
+    bio: '',
+    location: '',
+    website: '',
     avatar: '/placeholder.svg',
-    joinedAt: '2023-06-15T10:00:00Z',
-    plan: 'pro',
-    campaignsCount: 12,
-    leadsCount: 1247
+    joinedAt: user?.created_at || new Date().toISOString(),
+    plan: getPlanFromRole(user?.role || 'USER') as 'free' | 'starter' | 'pro',
+    campaignsCount: 0,
+    leadsCount: 0
   });
 
   const [notifications, setNotifications] = useState<NotificationSettings>({
@@ -119,9 +139,28 @@ const Profile = () => {
     confirmPassword: ''
   });
 
-  const handleSaveProfile = () => {
-    setProfile(editForm);
-    setIsEditing(false);
+  const handleSaveProfile = async () => {
+    setIsUpdating(true);
+    try {
+      await updateUser({
+        name: editForm.name,
+        celular: editForm.phone || undefined,
+      });
+      setProfile(editForm);
+      setIsEditing(false);
+      toast({
+        title: "Perfil atualizado",
+        description: "Suas informações foram atualizadas com sucesso.",
+      });
+    } catch (error) {
+      toast({
+        title: "Erro ao atualizar perfil",
+        description: error instanceof Error ? error.message : "Ocorreu um erro inesperado.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsUpdating(false);
+    }
   };
 
   const handleCancelEdit = () => {
@@ -148,13 +187,29 @@ const Profile = () => {
     console.log('Exportando dados do usuário...');
   };
 
-  const handleDeleteAccount = () => {
-    // Aqui você implementaria a lógica para excluir conta
-    console.log('Excluindo conta...');
+  const handleDeleteAccount = async () => {
+    setIsDeleting(true);
+    try {
+      await deleteUser();
+      toast({
+        title: "Conta excluída",
+        description: "Sua conta foi excluída com sucesso.",
+      });
+      navigate('/login');
+    } catch (error) {
+      toast({
+        title: "Erro ao excluir conta",
+        description: error instanceof Error ? error.message : "Ocorreu um erro inesperado.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsDeleting(false);
+    }
   };
 
   const planConfig = {
     free: { label: 'Gratuito', color: 'bg-gray-500' },
+    starter: { label: 'Starter', color: 'bg-green-500' },
     pro: { label: 'Pro', color: 'bg-blue-500' },
     enterprise: { label: 'Enterprise', color: 'bg-purple-500' }
   };
@@ -172,9 +227,9 @@ const Profile = () => {
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-        <TabsList className="grid w-full grid-cols-4">
+        <TabsList className="grid w-full grid-cols-3">
           <TabsTrigger value="profile">Perfil</TabsTrigger>
-          <TabsTrigger value="notifications">Notificações</TabsTrigger>
+          {/* <TabsTrigger value="notifications">Notificações</TabsTrigger> */}
           <TabsTrigger value="security">Segurança</TabsTrigger>
           <TabsTrigger value="billing">Plano</TabsTrigger>
         </TabsList>
@@ -197,11 +252,11 @@ const Profile = () => {
                   </Button>
                 ) : (
                   <div className="flex gap-2">
-                    <Button onClick={handleSaveProfile}>
+                    <Button onClick={handleSaveProfile} disabled={isUpdating}>
                       <Save className="h-4 w-4 mr-2" />
-                      Salvar
+                      {isUpdating ? 'Salvando...' : 'Salvar'}
                     </Button>
-                    <Button variant="outline" onClick={handleCancelEdit}>
+                    <Button variant="outline" onClick={handleCancelEdit} disabled={isUpdating}>
                       <X className="h-4 w-4 mr-2" />
                       Cancelar
                     </Button>
@@ -281,70 +336,12 @@ const Profile = () => {
                     placeholder="+55 11 99999-9999"
                   />
                 </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="location">Localização</Label>
-                  <Input
-                    id="location"
-                    value={isEditing ? editForm.location || '' : profile.location || ''}
-                    onChange={(e) => setEditForm(prev => ({ ...prev, location: e.target.value }))}
-                    disabled={!isEditing}
-                    placeholder="Cidade, Estado"
-                  />
-                </div>
-
-                <div className="space-y-2 md:col-span-2">
-                  <Label htmlFor="website">Website</Label>
-                  <Input
-                    id="website"
-                    value={isEditing ? editForm.website || '' : profile.website || ''}
-                    onChange={(e) => setEditForm(prev => ({ ...prev, website: e.target.value }))}
-                    disabled={!isEditing}
-                    placeholder="https://seusite.com"
-                  />
-                </div>
-
-                <div className="space-y-2 md:col-span-2">
-                  <Label htmlFor="bio">Bio</Label>
-                  <Textarea
-                    id="bio"
-                    value={isEditing ? editForm.bio || '' : profile.bio || ''}
-                    onChange={(e) => setEditForm(prev => ({ ...prev, bio: e.target.value }))}
-                    disabled={!isEditing}
-                    placeholder="Conte um pouco sobre você..."
-                    rows={3}
-                  />
-                </div>
-              </div>
-
-              {/* Stats */}
-              <Separator />
-              <div className="grid gap-4 md:grid-cols-2">
-                <div className="flex items-center gap-3 p-3 bg-muted/50 rounded-lg">
-                  <div className="p-2 bg-blue-500 rounded-lg">
-                    <Globe className="h-4 w-4 text-white" />
-                  </div>
-                  <div>
-                    <div className="font-medium">{profile.campaignsCount}</div>
-                    <div className="text-sm text-muted-foreground">Campanhas criadas</div>
-                  </div>
-                </div>
-
-                <div className="flex items-center gap-3 p-3 bg-muted/50 rounded-lg">
-                  <div className="p-2 bg-green-500 rounded-lg">
-                    <User className="h-4 w-4 text-white" />
-                  </div>
-                  <div>
-                    <div className="font-medium">{profile.leadsCount}</div>
-                    <div className="text-sm text-muted-foreground">Leads capturados</div>
-                  </div>
-                </div>
               </div>
             </CardContent>
           </Card>
         </TabsContent>
 
-        {/* Notifications Tab */}
+        {/* Notifications Tab 
         <TabsContent value="notifications" className="space-y-6">
           <Card>
             <CardHeader>
@@ -436,6 +433,7 @@ const Profile = () => {
             </CardContent>
           </Card>
         </TabsContent>
+        */}
 
         {/* Security Tab */}
         <TabsContent value="security" className="space-y-6">
@@ -447,57 +445,6 @@ const Profile = () => {
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
-              <div className="space-y-4">
-                <div className="flex items-center justify-between">
-                  <div className="space-y-0.5">
-                    <Label>Autenticação de dois fatores</Label>
-                    <p className="text-sm text-muted-foreground">
-                      Adicione uma camada extra de segurança
-                    </p>
-                  </div>
-                  <Switch
-                    checked={security.twoFactorEnabled}
-                    onCheckedChange={(checked) => handleSecurityChange('twoFactorEnabled', checked)}
-                  />
-                </div>
-
-                <div className="flex items-center justify-between">
-                  <div className="space-y-0.5">
-                    <Label>Alertas de login</Label>
-                    <p className="text-sm text-muted-foreground">
-                      Seja notificado sobre novos logins na sua conta
-                    </p>
-                  </div>
-                  <Switch
-                    checked={security.loginAlerts}
-                    onCheckedChange={(checked) => handleSecurityChange('loginAlerts', checked)}
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label>Timeout da sessão</Label>
-                  <Select
-                    value={security.sessionTimeout.toString()}
-                    onValueChange={(value) => handleSecurityChange('sessionTimeout', parseInt(value))}
-                  >
-                    <SelectTrigger className="w-full">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="15">15 minutos</SelectItem>
-                      <SelectItem value="30">30 minutos</SelectItem>
-                      <SelectItem value="60">1 hora</SelectItem>
-                      <SelectItem value="240">4 horas</SelectItem>
-                      <SelectItem value="480">8 horas</SelectItem>
-                    </SelectContent>
-                  </Select>
-                  <p className="text-sm text-muted-foreground">
-                    Tempo de inatividade antes de fazer logout automático
-                  </p>
-                </div>
-              </div>
-
-              <Separator />
 
               {/* Change Password */}
               <div className="space-y-4">
@@ -572,11 +519,6 @@ const Profile = () => {
                   </div>
                   <div>
                     <h3 className="font-medium">Plano {planConfig[profile.plan].label}</h3>
-                    <p className="text-sm text-muted-foreground">
-                      {profile.plan === 'free' && 'Até 3 campanhas e 100 leads'}
-                      {profile.plan === 'pro' && 'Campanhas ilimitadas e 10.000 leads'}
-                      {profile.plan === 'enterprise' && 'Tudo ilimitado + suporte prioritário'}
-                    </p>
                   </div>
                 </div>
                 <Button variant="outline">
@@ -590,14 +532,6 @@ const Profile = () => {
                 <h3 className="text-lg font-medium">Dados da Conta</h3>
 
                 <div className="flex items-center justify-between">
-                  <span>Exportar dados pessoais</span>
-                  <Button variant="outline" onClick={handleExportData}>
-                    <Download className="h-4 w-4 mr-2" />
-                    Exportar
-                  </Button>
-                </div>
-
-                <div className="flex items-center justify-between">
                   <div>
                     <span className="font-medium text-destructive">Excluir conta</span>
                     <p className="text-sm text-muted-foreground">
@@ -606,9 +540,9 @@ const Profile = () => {
                   </div>
                   <AlertDialog>
                     <AlertDialogTrigger asChild>
-                      <Button variant="destructive">
+                      <Button variant="destructive" disabled={isDeleting}>
                         <Trash2 className="h-4 w-4 mr-2" />
-                        Excluir
+                        {isDeleting ? 'Excluindo...' : 'Excluir'}
                       </Button>
                     </AlertDialogTrigger>
                     <AlertDialogContent>

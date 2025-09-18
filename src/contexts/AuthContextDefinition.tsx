@@ -17,7 +17,10 @@ interface AuthContextType {
   token: string | null;
   login: (email: string, password: string, recaptchaToken: string) => Promise<void>;
   register: (data: RegisterData) => Promise<void>;
-  logout: () => void;
+  logout: () => Promise<void>;
+  updateUser: (data: UpdateUserData) => Promise<void>;
+  deleteUser: () => Promise<void>;
+  getPortalUrl: (returnUrl?: string) => Promise<string>;
   loading: boolean;
   isAuthenticated: boolean;
   hasRole: (roles: string | string[]) => boolean;
@@ -32,6 +35,11 @@ interface RegisterData {
   recaptcha_token: string;
 }
 
+interface UpdateUserData {
+  name?: string;
+  celular?: string;
+}
+
 export const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-export type { User, AuthContextType, RegisterData };
+export type { User, AuthContextType, RegisterData, UpdateUserData };

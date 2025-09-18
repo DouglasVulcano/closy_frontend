@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback, ReactNode } from 'react';
 import { API_BASE_URL } from '../constants/auth';
-import { AuthContext, type User, type AuthContextType, type RegisterData } from './AuthContextDefinition';
+import { AuthContext, type User, type AuthContextType, type RegisterData, type UpdateUserData } from './AuthContextDefinition';
 
 export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
@@ -15,11 +15,25 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     return roleArray.includes(user.role);
   };
 
-  const logout = useCallback(() => {
-    localStorage.removeItem('token');
-    setToken(null);
-    setUser(null);
-  }, []);
+  const logout = useCallback(async () => {
+    try {
+      if (token) {
+        await fetch(`${API_BASE_URL}/logout`, {
+          method: 'DELETE',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Accept': 'application/json',
+          },
+        });
+      }
+    } catch (error) {
+      console.error('Logout error:', error);
+    } finally {
+      localStorage.removeItem('token');
+      setToken(null);
+      setUser(null);
+    }
+  }, [token]);
 
   const fetchUser = useCallback(async (authToken: string) => {
     try {
@@ -60,10 +74,10 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       if (response.ok) {
         const data = await response.json();
         const authToken = data.token;
-        
+
         localStorage.setItem('token', authToken);
         setToken(authToken);
-        
+
         await fetchUser(authToken);
       } else {
         const errorData = await response.json();
@@ -89,7 +103,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       if (response.ok) {
         const responseData = await response.json();
         const authToken = responseData.token;
-        
+
         localStorage.setItem('token', authToken);
         setToken(authToken);
         setUser(responseData.user);
@@ -99,6 +113,80 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       }
     } catch (error) {
       console.error('Registration error:', error);
+      throw error;
+    }
+  };
+
+  const updateUser = async (data: UpdateUserData) => {
+    try {
+      const response = await fetch(`${API_BASE_URL}/user`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+        body: JSON.stringify(data),
+      });
+
+      if (response.ok) {
+        const updatedUser = await response.json();
+        setUser(updatedUser);
+      } else {
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Failed to update user');
+      }
+    } catch (error) {
+      console.error('Update user error:', error);
+      throw error;
+    }
+  };
+
+  const deleteUser = async () => {
+    try {
+      const response = await fetch(`${API_BASE_URL}/user`, {
+        method: 'DELETE',
+        headers: {
+          'Accept': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+      });
+
+      if (response.ok) {
+        localStorage.removeItem('token');
+        setToken(null);
+        setUser(null);
+      } else {
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Failed to delete user');
+      }
+    } catch (error) {
+      console.error('Delete user error:', error);
+      throw error;
+    }
+  };
+
+  const getPortalUrl = async (returnUrl?: string) => {
+    try {
+      const response = await fetch(`${API_BASE_URL}/portal`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+        body: JSON.stringify({ return_url: returnUrl || '' }),
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        return data.portal_url;
+      } else {
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Failed to get portal URL');
+      }
+    } catch (error) {
+      console.error('Get portal URL error:', error);
       throw error;
     }
   };
@@ -120,6 +208,9 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     login,
     register,
     logout,
+    updateUser,
+    deleteUser,
+    getPortalUrl,
     loading,
     isAuthenticated,
     hasRole,

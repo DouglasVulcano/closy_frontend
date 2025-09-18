@@ -111,46 +111,34 @@ const recentLeads = [
 
 const Dashboard = () => {
   return (
-    <div className="space-y-6">
+    <div className="w-full max-w-full overflow-hidden space-y-6">
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <div>
+        <div className="min-w-0 flex-1">
           <h1 className="text-2xl font-bold tracking-tight">Dashboard</h1>
           <p className="text-muted-foreground">
             Visão geral das suas campanhas e leads
           </p>
         </div>
-        <div className="flex items-center gap-2">
-          <Button variant="outline" size="sm">
-            <Calendar className="h-4 w-4 mr-2" />
-            Últimos 30 dias
-          </Button>
-          <Button asChild>
-            <Link to="/campaigns/new">
-              <Plus className="h-4 w-4 mr-2" />
-              Nova Campanha
-            </Link>
-          </Button>
-        </div>
       </div>
 
       {/* Stats Grid */}
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+      <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
         {stats.map((stat) => {
           const Icon = stat.icon;
           return (
-            <Card key={stat.title} className="hover-lift">
+            <Card key={stat.title} className="hover-lift w-full">
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">
+                <CardTitle className="text-sm font-medium truncate">
                   {stat.title}
                 </CardTitle>
-                <Icon className="h-4 w-4 text-muted-foreground" />
+                <Icon className="h-4 w-4 text-muted-foreground flex-shrink-0" />
               </CardHeader>
               <CardContent>
                 <div className="text-2xl font-bold">{stat.value}</div>
                 <div className="flex items-center text-xs text-muted-foreground">
-                  <span className="mr-1">{stat.description}</span>
-                  <div className={`flex items-center ${
+                  <span className="mr-1 truncate">{stat.description}</span>
+                  <div className={`flex items-center flex-shrink-0 ${
                     stat.changeType === 'positive' ? 'text-success' : 'text-destructive'
                   }`}>
                     {stat.changeType === 'positive' ? (
@@ -167,18 +155,18 @@ const Dashboard = () => {
         })}
       </div>
 
-      <div className="grid gap-6 lg:grid-cols-2">
+      <div className="grid gap-6 grid-cols-1 lg:grid-cols-2">
         {/* Recent Campaigns */}
-        <Card>
+        <Card className="w-full">
           <CardHeader>
-            <div className="flex items-center justify-between">
-              <div>
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+              <div className="min-w-0 flex-1">
                 <CardTitle>Campanhas Recentes</CardTitle>
                 <CardDescription>
                   Suas campanhas mais recentes e seu desempenho
                 </CardDescription>
               </div>
-              <Button variant="outline" size="sm" asChild>
+              <Button variant="outline" size="sm" asChild className="w-full sm:w-auto">
                 <Link to="/campaigns">
                   Ver todas
                 </Link>
@@ -190,22 +178,22 @@ const Dashboard = () => {
               {recentCampaigns.map((campaign) => (
                 <div key={campaign.id} className="flex items-center justify-between p-3 rounded-lg border border-border hover:bg-muted/50 transition-colors">
                   <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 mb-1">
+                    <div className="flex flex-col sm:flex-row sm:items-center gap-2 mb-1">
                       <h4 className="font-medium truncate">{campaign.name}</h4>
                       <Badge 
                         variant={campaign.status === 'active' ? 'default' : 'secondary'}
-                        className="text-xs"
+                        className="text-xs w-fit"
                       >
                         {campaign.status === 'active' ? 'Ativa' : 'Pausada'}
                       </Badge>
                     </div>
-                    <div className="flex items-center gap-4 text-xs text-muted-foreground">
+                    <div className="flex flex-wrap items-center gap-2 sm:gap-4 text-xs text-muted-foreground">
                       <span>{campaign.leads} leads</span>
                       <span>{campaign.conversion}% conversão</span>
                       <span>{campaign.views.toLocaleString()} views</span>
                     </div>
                   </div>
-                  <Button variant="ghost" size="sm">
+                  <Button variant="ghost" size="sm" className="flex-shrink-0">
                     <ArrowUpRight className="h-4 w-4" />
                   </Button>
                 </div>
@@ -215,16 +203,16 @@ const Dashboard = () => {
         </Card>
 
         {/* Recent Leads */}
-        <Card>
+        <Card className="w-full">
           <CardHeader>
-            <div className="flex items-center justify-between">
-              <div>
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+              <div className="min-w-0 flex-1">
                 <CardTitle>Leads Recentes</CardTitle>
                 <CardDescription>
                   Últimos contatos capturados
                 </CardDescription>
               </div>
-              <Button variant="outline" size="sm" asChild>
+              <Button variant="outline" size="sm" asChild className="w-full sm:w-auto">
                 <Link to="/leads">
                   Ver todos
                 </Link>
@@ -235,18 +223,12 @@ const Dashboard = () => {
             <div className="space-y-4">
               {recentLeads.map((lead) => (
                 <div key={lead.id} className="flex items-center gap-3 p-3 rounded-lg border border-border hover:bg-muted/50 transition-colors">
-                  <Avatar className="h-10 w-10">
-                    <AvatarImage src={lead.avatar} alt={lead.name} />
-                    <AvatarFallback>
-                      {lead.name.split(' ').map(n => n[0]).join('')}
-                    </AvatarFallback>
-                  </Avatar>
                   <div className="flex-1 min-w-0">
                     <h4 className="font-medium truncate">{lead.name}</h4>
                     <p className="text-sm text-muted-foreground truncate">{lead.email}</p>
-                    <p className="text-xs text-muted-foreground">{lead.campaign}</p>
+                    <p className="text-xs text-muted-foreground truncate">{lead.campaign}</p>
                   </div>
-                  <div className="text-xs text-muted-foreground">
+                  <div className="text-xs text-muted-foreground flex-shrink-0 text-right">
                     {new Date(lead.createdAt).toLocaleDateString('pt-BR')}
                   </div>
                 </div>
@@ -257,7 +239,7 @@ const Dashboard = () => {
       </div>
 
       {/* Performance Overview */}
-      <Card>
+      <Card className="w-full">
         <CardHeader>
           <CardTitle>Visão Geral de Performance</CardTitle>
           <CardDescription>
@@ -265,11 +247,11 @@ const Dashboard = () => {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="grid gap-6 md:grid-cols-3">
+          <div className="grid gap-6 grid-cols-1 sm:grid-cols-2 md:grid-cols-3">
             <div className="space-y-2">
               <div className="flex items-center justify-between text-sm">
-                <span>Taxa de Conversão</span>
-                <span className="font-medium">3.2%</span>
+                <span className="truncate">Taxa de Conversão</span>
+                <span className="font-medium flex-shrink-0">3.2%</span>
               </div>
               <Progress value={32} className="h-2" />
               <p className="text-xs text-muted-foreground">Meta: 5%</p>
@@ -277,8 +259,8 @@ const Dashboard = () => {
             
             <div className="space-y-2">
               <div className="flex items-center justify-between text-sm">
-                <span>Engajamento</span>
-                <span className="font-medium">68%</span>
+                <span className="truncate">Engajamento</span>
+                <span className="font-medium flex-shrink-0">68%</span>
               </div>
               <Progress value={68} className="h-2" />
               <p className="text-xs text-muted-foreground">Meta: 70%</p>
@@ -286,8 +268,8 @@ const Dashboard = () => {
             
             <div className="space-y-2">
               <div className="flex items-center justify-between text-sm">
-                <span>Qualidade dos Leads</span>
-                <span className="font-medium">85%</span>
+                <span className="truncate">Qualidade dos Leads</span>
+                <span className="font-medium flex-shrink-0">85%</span>
               </div>
               <Progress value={85} className="h-2" />
               <p className="text-xs text-muted-foreground">Meta: 80%</p>

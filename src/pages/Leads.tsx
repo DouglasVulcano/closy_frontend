@@ -14,9 +14,10 @@ import {
   Users,
   TrendingUp,
   Clock,
-  MapPin
+  MapPin,
+  X
 } from 'lucide-react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
@@ -155,8 +156,8 @@ const Leads = () => {
 
   const filteredLeads = leads.filter(lead => {
     const matchesSearch = lead.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                         lead.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                         lead.campaign.toLowerCase().includes(searchQuery.toLowerCase());
+      lead.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      lead.campaign.toLowerCase().includes(searchQuery.toLowerCase());
     const matchesStatus = statusFilter === 'all' || lead.status === statusFilter;
     const matchesCampaign = campaignFilter === 'all' || lead.campaignId === campaignFilter;
     return matchesSearch && matchesStatus && matchesCampaign;
@@ -250,7 +251,7 @@ const Leads = () => {
             </p>
           </CardContent>
         </Card>
-        
+
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Novos</CardTitle>
@@ -263,7 +264,7 @@ const Leads = () => {
             </p>
           </CardContent>
         </Card>
-        
+
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Qualificados</CardTitle>
@@ -276,7 +277,7 @@ const Leads = () => {
             </p>
           </CardContent>
         </Card>
-        
+
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Convertidos</CardTitle>
@@ -289,7 +290,7 @@ const Leads = () => {
             </p>
           </CardContent>
         </Card>
-        
+
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Taxa de Conversão</CardTitle>
@@ -309,20 +310,20 @@ const Leads = () => {
       {/* Filters and Actions */}
       <Card>
         <CardHeader>
-          <div className="flex flex-col lg:flex-row gap-4">
-            <div className="flex-1">
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                <Input
-                  placeholder="Buscar por nome, email ou campanha..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="pl-10"
-                />
-              </div>
+          <div className="space-y-4">
+            {/* Search Bar */}
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder="Buscar por nome, email ou campanha..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="pl-10"
+              />
             </div>
-            
-            <div className="flex gap-2">
+
+            {/* Filters - Desktop */}
+            <div className="hidden md:flex gap-2">
               <Select value={statusFilter} onValueChange={setStatusFilter}>
                 <SelectTrigger className="w-[140px]">
                   <Filter className="h-4 w-4 mr-2" />
@@ -337,7 +338,7 @@ const Leads = () => {
                   <SelectItem value="lost">Perdidos</SelectItem>
                 </SelectContent>
               </Select>
-              
+
               <Select value={campaignFilter} onValueChange={setCampaignFilter}>
                 <SelectTrigger className="w-[160px]">
                   <SelectValue placeholder="Campanha" />
@@ -350,7 +351,7 @@ const Leads = () => {
                   <SelectItem value="5">Newsletter</SelectItem>
                 </SelectContent>
               </Select>
-              
+
               <Select value={sortBy} onValueChange={setSortBy}>
                 <SelectTrigger className="w-[140px]">
                   <SelectValue placeholder="Ordenar" />
@@ -364,14 +365,64 @@ const Leads = () => {
                 </SelectContent>
               </Select>
             </div>
+
+            {/* Filters - Mobile */}
+            <div className="md:hidden space-y-3">
+              <div className="grid grid-cols-2 gap-2">
+                <Select value={statusFilter} onValueChange={setStatusFilter}>
+                  <SelectTrigger>
+                    <Filter className="h-4 w-4 mr-2" />
+                    <SelectValue placeholder="Status" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Todos</SelectItem>
+                    <SelectItem value="new">Novos</SelectItem>
+                    <SelectItem value="contacted">Contatados</SelectItem>
+                    <SelectItem value="qualified">Qualificados</SelectItem>
+                    <SelectItem value="converted">Convertidos</SelectItem>
+                    <SelectItem value="lost">Perdidos</SelectItem>
+                  </SelectContent>
+                </Select>
+
+                <Select value={sortBy} onValueChange={setSortBy}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Ordenar" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="created">Mais recentes</SelectItem>
+                    <SelectItem value="name">Nome</SelectItem>
+                    <SelectItem value="email">Email</SelectItem>
+                    <SelectItem value="campaign">Campanha</SelectItem>
+                    <SelectItem value="status">Status</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <Select value={campaignFilter} onValueChange={setCampaignFilter}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Filtrar por campanha" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todas as campanhas</SelectItem>
+                  <SelectItem value="1">Black Friday 2024</SelectItem>
+                  <SelectItem value="2">Webinar Marketing</SelectItem>
+                  <SelectItem value="3">E-book Gratuito</SelectItem>
+                  <SelectItem value="5">Newsletter</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
           </div>
-          
+
           {selectedLeads.length > 0 && (
-            <div className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
-              <span className="text-sm font-medium">
-                {selectedLeads.length} lead(s) selecionado(s)
-              </span>
-              <div className="flex gap-2">
+            <div className="p-4 bg-muted/50 rounded-lg">
+              <div className="flex items-center justify-between mb-3">
+                <span className="text-sm font-medium">
+                  {selectedLeads.length} lead(s) selecionado(s)
+                </span>
+              </div>
+
+              {/* Desktop Actions */}
+              <div className="hidden md:flex gap-2">
                 <Button size="sm" variant="outline">
                   <Mail className="h-4 w-4 mr-2" />
                   Enviar Email
@@ -385,166 +436,309 @@ const Leads = () => {
                   Exportar
                 </Button>
               </div>
+
+              {/* Mobile Actions */}
+              <div className="md:hidden space-y-2">
+                <div className="grid grid-cols-2 gap-2">
+                  <Button size="sm" variant="outline" className="text-xs">
+                    <Mail className="h-4 w-4 mr-1" />
+                    Email
+                  </Button>
+                  <Button size="sm" variant="outline" className="text-xs">
+                    <Tag className="h-4 w-4 mr-1" />
+                    Tag
+                  </Button>
+                </div>
+                <Button size="sm" variant="outline" onClick={handleExport} className="w-full text-xs">
+                  <Download className="h-4 w-4 mr-2" />
+                  Exportar Selecionados
+                </Button>
+              </div>
             </div>
           )}
         </CardHeader>
-        
+
         <CardContent>
-          <div className="rounded-md border">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead className="w-12">
-                    <Checkbox
-                      checked={selectedLeads.length === sortedLeads.length && sortedLeads.length > 0}
-                      onCheckedChange={handleSelectAll}
-                    />
-                  </TableHead>
-                  <TableHead>Lead</TableHead>
-                  <TableHead>Campanha</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead>Fonte</TableHead>
-                  <TableHead>Data</TableHead>
-                  <TableHead className="w-12"></TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {sortedLeads.map((lead) => (
-                  <TableRow key={lead.id}>
-                    <TableCell>
+          {/* Desktop Table View */}
+          <div className="hidden md:block">
+            <div className="rounded-md border">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead className="w-12">
+                      <Checkbox
+                        checked={selectedLeads.length === sortedLeads.length && sortedLeads.length > 0}
+                        onCheckedChange={handleSelectAll}
+                      />
+                    </TableHead>
+                    <TableHead>Lead</TableHead>
+                    <TableHead>Campanha</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead>Data</TableHead>
+                    <TableHead className="w-12"></TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {sortedLeads.map((lead) => (
+                    <TableRow key={lead.id}>
+                      <TableCell>
+                        <Checkbox
+                          checked={selectedLeads.includes(lead.id)}
+                          onCheckedChange={(checked) => handleSelectLead(lead.id, checked as boolean)}
+                        />
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex items-center gap-3">
+                          <div className="min-w-0">
+                            <div className="font-medium truncate">{lead.name}</div>
+                            <div className="text-sm text-muted-foreground truncate">{lead.email}</div>
+                            {lead.phone && (
+                              <div className="text-xs text-muted-foreground flex items-center gap-1">
+                                <Phone className="h-3 w-3" />
+                                {lead.phone}
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <div className="font-medium">{lead.campaign}</div>
+                      </TableCell>
+                      <TableCell>
+                        <Badge variant={statusConfig[lead.status].variant}>
+                          {statusConfig[lead.status].label}
+                        </Badge>
+                      </TableCell>
+                      <TableCell>
+                        <div className="text-sm">
+                          {new Date(lead.createdAt).toLocaleDateString('pt-BR')}
+                        </div>
+                        <div className="text-xs text-muted-foreground">
+                          {new Date(lead.createdAt).toLocaleTimeString('pt-BR', {
+                            hour: '2-digit',
+                            minute: '2-digit'
+                          })}
+                        </div>
+                        {lead.lastContact && (
+                          <div className="text-xs text-muted-foreground flex items-center gap-1 mt-1">
+                            <Clock className="h-3 w-3" />
+                            Último contato: {new Date(lead.lastContact).toLocaleDateString('pt-BR')}
+                          </div>
+                        )}
+                      </TableCell>
+                      <TableCell>
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" size="icon" className="h-8 w-8">
+                              <MoreHorizontal className="h-4 w-4" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            <DropdownMenuLabel>Ações</DropdownMenuLabel>
+                            <DropdownMenuItem>
+                              <Eye className="mr-2 h-4 w-4" />
+                              Ver detalhes
+                            </DropdownMenuItem>
+                            <DropdownMenuItem>
+                              <Edit className="mr-2 h-4 w-4" />
+                              Editar
+                            </DropdownMenuItem>
+                            <DropdownMenuItem>
+                              <Mail className="mr-2 h-4 w-4" />
+                              Enviar email
+                            </DropdownMenuItem>
+                            <DropdownMenuSeparator />
+                            <DropdownMenuItem onClick={() => handleStatusChange(lead.id, 'contacted')}>
+                              Marcar como contatado
+                            </DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => handleStatusChange(lead.id, 'qualified')}>
+                              Marcar como qualificado
+                            </DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => handleStatusChange(lead.id, 'converted')}>
+                              Marcar como convertido
+                            </DropdownMenuItem>
+                            <DropdownMenuSeparator />
+                            <DropdownMenuItem
+                              onClick={() => handleDelete(lead.id)}
+                              className="text-destructive focus:text-destructive"
+                            >
+                              <Trash2 className="mr-2 h-4 w-4" />
+                              Excluir
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+          </div>
+
+          {/* Mobile Card View */}
+          <div className="md:hidden space-y-4">
+            {sortedLeads.map((lead) => (
+              <Card key={lead.id} className="relative">
+                <CardContent className="p-4">
+                  <div className="flex items-start justify-between mb-3">
+                    <div className="flex items-center gap-3 flex-1 min-w-0">
                       <Checkbox
                         checked={selectedLeads.includes(lead.id)}
                         onCheckedChange={(checked) => handleSelectLead(lead.id, checked as boolean)}
                       />
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex items-center gap-3">
-                        <Avatar className="h-8 w-8">
-                          <AvatarImage src={lead.avatar} alt={lead.name} />
-                          <AvatarFallback>
-                            {lead.name.split(' ').map(n => n[0]).join('')}
-                          </AvatarFallback>
-                        </Avatar>
-                        <div className="min-w-0">
-                          <div className="font-medium truncate">{lead.name}</div>
-                          <div className="text-sm text-muted-foreground truncate">{lead.email}</div>
-                          {lead.phone && (
-                            <div className="text-xs text-muted-foreground flex items-center gap-1">
-                              <Phone className="h-3 w-3" />
-                              {lead.phone}
-                            </div>
-                          )}
+                      <Avatar className="h-10 w-10 flex-shrink-0">
+                        <AvatarImage src={lead.avatar} alt={lead.name} />
+                        <AvatarFallback>
+                          {lead.name.split(' ').map(n => n[0]).join('').toUpperCase()}
+                        </AvatarFallback>
+                      </Avatar>
+                      <div className="min-w-0 flex-1">
+                        <h3 className="font-medium truncate">{lead.name}</h3>
+                        <p className="text-sm text-muted-foreground truncate">{lead.email}</p>
+                      </div>
+                    </div>
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button variant="ghost" size="icon" className="h-8 w-8 flex-shrink-0">
+                          <MoreHorizontal className="h-4 w-4" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        <DropdownMenuLabel>Ações</DropdownMenuLabel>
+                        <DropdownMenuItem>
+                          <Eye className="mr-2 h-4 w-4" />
+                          Ver detalhes
+                        </DropdownMenuItem>
+                        <DropdownMenuItem>
+                          <Edit className="mr-2 h-4 w-4" />
+                          Editar
+                        </DropdownMenuItem>
+                        <DropdownMenuItem>
+                          <Mail className="mr-2 h-4 w-4" />
+                          Enviar email
+                        </DropdownMenuItem>
+                        <DropdownMenuSeparator />
+                        <DropdownMenuItem onClick={() => handleStatusChange(lead.id, 'contacted')}>
+                          Marcar como contatado
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => handleStatusChange(lead.id, 'qualified')}>
+                          Marcar como qualificado
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => handleStatusChange(lead.id, 'converted')}>
+                          Marcar como convertido
+                        </DropdownMenuItem>
+                        <DropdownMenuSeparator />
+                        <DropdownMenuItem
+                          onClick={() => handleDelete(lead.id)}
+                          className="text-destructive focus:text-destructive"
+                        >
+                          <Trash2 className="mr-2 h-4 w-4" />
+                          Excluir
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  </div>
+
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm font-medium">Campanha:</span>
+                      <span className="text-sm text-muted-foreground truncate max-w-[60%]">
+                        {lead.campaign}
+                      </span>
+                    </div>
+
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm font-medium">Status:</span>
+                      <Badge variant={statusConfig[lead.status].variant} className="text-xs">
+                        {statusConfig[lead.status].label}
+                      </Badge>
+                    </div>
+
+                    {lead.phone && (
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm font-medium">Telefone:</span>
+                        <div className="flex items-center gap-1 text-sm text-muted-foreground">
+                          <Phone className="h-3 w-3" />
+                          {lead.phone}
                         </div>
                       </div>
-                    </TableCell>
-                    <TableCell>
-                      <div className="font-medium">{lead.campaign}</div>
-                      {lead.location && (
-                        <div className="text-xs text-muted-foreground flex items-center gap-1">
+                    )}
+
+                    {lead.location && (
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm font-medium">Localização:</span>
+                        <div className="flex items-center gap-1 text-sm text-muted-foreground">
                           <MapPin className="h-3 w-3" />
                           {lead.location}
                         </div>
-                      )}
-                    </TableCell>
-                    <TableCell>
-                      <Badge variant={statusConfig[lead.status].variant}>
-                        {statusConfig[lead.status].label}
-                      </Badge>
-                      {lead.tags.length > 0 && (
-                        <div className="flex gap-1 mt-1">
-                          {lead.tags.slice(0, 2).map((tag) => (
-                            <Badge key={tag} variant="outline" className="text-xs">
-                              {tag}
-                            </Badge>
-                          ))}
-                          {lead.tags.length > 2 && (
-                            <Badge variant="outline" className="text-xs">
-                              +{lead.tags.length - 2}
-                            </Badge>
-                          )}
-                        </div>
-                      )}
-                    </TableCell>
-                    <TableCell>
-                      <Badge variant="outline">{lead.source}</Badge>
-                    </TableCell>
-                    <TableCell>
-                      <div className="text-sm">
-                        {new Date(lead.createdAt).toLocaleDateString('pt-BR')}
                       </div>
-                      <div className="text-xs text-muted-foreground">
+                    )}
+
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm font-medium">Criado em:</span>
+                      <div className="text-sm text-muted-foreground">
+                        {new Date(lead.createdAt).toLocaleDateString('pt-BR')} às{' '}
                         {new Date(lead.createdAt).toLocaleTimeString('pt-BR', {
                           hour: '2-digit',
                           minute: '2-digit'
                         })}
                       </div>
-                      {lead.lastContact && (
-                        <div className="text-xs text-muted-foreground flex items-center gap-1 mt-1">
+                    </div>
+
+                    {lead.lastContact && (
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm font-medium">Último contato:</span>
+                        <div className="flex items-center gap-1 text-sm text-muted-foreground">
                           <Clock className="h-3 w-3" />
-                          Último contato: {new Date(lead.lastContact).toLocaleDateString('pt-BR')}
+                          {new Date(lead.lastContact).toLocaleDateString('pt-BR')}
                         </div>
-                      )}
-                    </TableCell>
-                    <TableCell>
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button variant="ghost" size="icon" className="h-8 w-8">
-                            <MoreHorizontal className="h-4 w-4" />
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
-                          <DropdownMenuLabel>Ações</DropdownMenuLabel>
-                          <DropdownMenuItem>
-                            <Eye className="mr-2 h-4 w-4" />
-                            Ver detalhes
-                          </DropdownMenuItem>
-                          <DropdownMenuItem>
-                            <Edit className="mr-2 h-4 w-4" />
-                            Editar
-                          </DropdownMenuItem>
-                          <DropdownMenuItem>
-                            <Mail className="mr-2 h-4 w-4" />
-                            Enviar email
-                          </DropdownMenuItem>
-                          <DropdownMenuSeparator />
-                          <DropdownMenuItem onClick={() => handleStatusChange(lead.id, 'contacted')}>
-                            Marcar como contatado
-                          </DropdownMenuItem>
-                          <DropdownMenuItem onClick={() => handleStatusChange(lead.id, 'qualified')}>
-                            Marcar como qualificado
-                          </DropdownMenuItem>
-                          <DropdownMenuItem onClick={() => handleStatusChange(lead.id, 'converted')}>
-                            Marcar como convertido
-                          </DropdownMenuItem>
-                          <DropdownMenuSeparator />
-                          <DropdownMenuItem 
-                            onClick={() => handleDelete(lead.id)}
-                            className="text-destructive focus:text-destructive"
-                          >
-                            <Trash2 className="mr-2 h-4 w-4" />
-                            Excluir
-                          </DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-            
-            {sortedLeads.length === 0 && (
-              <div className="text-center py-12">
-                <Users className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-                <h3 className="text-lg font-medium mb-2">Nenhum lead encontrado</h3>
-                <p className="text-muted-foreground">
-                  {searchQuery || statusFilter !== 'all' || campaignFilter !== 'all'
-                    ? 'Tente ajustar os filtros de busca'
-                    : 'Seus leads aparecerão aqui quando suas campanhas começarem a capturar contatos'
-                  }
-                </p>
-              </div>
-            )}
+                      </div>
+                    )}
+
+                    {lead.tags && lead.tags.length > 0 && (
+                      <div className="flex items-start justify-between">
+                        <span className="text-sm font-medium">Tags:</span>
+                        <div className="flex flex-wrap gap-1 max-w-[60%]">
+                          {lead.tags.map((tag, index) => (
+                            <Badge key={index} variant="outline" className="text-xs">
+                              {tag}
+                            </Badge>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="flex gap-2 mt-4 pt-3 border-t">
+                    <Button size="sm" variant="outline" className="flex-1">
+                      <Mail className="h-4 w-4 mr-2" />
+                      Email
+                    </Button>
+                    {lead.phone && (
+                      <Button size="sm" variant="outline" className="flex-1">
+                        <Phone className="h-4 w-4 mr-2" />
+                        Ligar
+                      </Button>
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
           </div>
+
+          {/* Empty State */}
+          {sortedLeads.length === 0 && (
+            <div className="text-center py-12">
+              <Users className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+              <h3 className="text-lg font-medium mb-2">Nenhum lead encontrado</h3>
+              <p className="text-muted-foreground">
+                {searchQuery || statusFilter !== 'all' || campaignFilter !== 'all'
+                  ? 'Tente ajustar os filtros de busca'
+                  : 'Seus leads aparecerão aqui quando suas campanhas começarem a capturar contatos'
+                }
+              </p>
+            </div>
+          )}
         </CardContent>
       </Card>
     </div>
