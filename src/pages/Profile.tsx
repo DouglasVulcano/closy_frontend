@@ -1,16 +1,14 @@
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { useNavigate } from 'react-router-dom';
 import { useToast } from '@/hooks/use-toast';
+import { uploadService, userService } from '@/services';
 import {
-  User,
   Camera,
   Edit,
   Save,
   X,
-  Globe,
   CreditCard,
-  Download,
   Trash2,
   Key,
   Eye,
@@ -20,16 +18,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
-import { Switch } from '@/components/ui/switch';
 import { Badge } from '@/components/ui/badge';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
 import {
   Tabs,
   TabsContent,
@@ -65,23 +54,8 @@ interface UserProfile {
   leadsCount: number;
 }
 
-interface NotificationSettings {
-  emailNotifications: boolean;
-  pushNotifications: boolean;
-  marketingEmails: boolean;
-  weeklyReports: boolean;
-  leadAlerts: boolean;
-  campaignUpdates: boolean;
-}
-
-interface SecuritySettings {
-  twoFactorEnabled: boolean;
-  loginAlerts: boolean;
-  sessionTimeout: number;
-}
-
 const Profile = () => {
-  const { user, updateUser, deleteUser, getPortalUrl } = useAuth();
+  const { user, token, updateUser, deleteUser, getPortalUrl } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
   const [isEditing, setIsEditing] = useState(false);
@@ -89,6 +63,8 @@ const Profile = () => {
   const [activeTab, setActiveTab] = useState('profile');
   const [isUpdating, setIsUpdating] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [isUploadingImage, setIsUploadingImage] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Mapear role para plano
   const getPlanFromRole = (role: string) => {
@@ -110,26 +86,11 @@ const Profile = () => {
     bio: '',
     location: '',
     website: '',
-    avatar: '/placeholder.svg',
+    avatar: user?.profile_picture || '/placeholder.svg',
     joinedAt: user?.created_at || new Date().toISOString(),
     plan: getPlanFromRole(user?.role || 'USER') as 'free' | 'starter' | 'pro',
     campaignsCount: 0,
     leadsCount: 0
-  });
-
-  const [notifications, setNotifications] = useState<NotificationSettings>({
-    emailNotifications: true,
-    pushNotifications: true,
-    marketingEmails: false,
-    weeklyReports: true,
-    leadAlerts: true,
-    campaignUpdates: true
-  });
-
-  const [security, setSecurity] = useState<SecuritySettings>({
-    twoFactorEnabled: false,
-    loginAlerts: true,
-    sessionTimeout: 30
   });
 
   const [editForm, setEditForm] = useState(profile);
@@ -168,23 +129,45 @@ const Profile = () => {
     setIsEditing(false);
   };
 
-  const handleNotificationChange = (key: keyof NotificationSettings, value: boolean) => {
-    setNotifications(prev => ({ ...prev, [key]: value }));
-  };
+  const handlePasswordChange = async () => {
+    if (passwordForm.newPassword !== passwordForm.confirmPassword) {
+      toast({
+        title: "Erro na validação",
+        description: "As senhas não coincidem.",
+        variant: "destructive",
+      });
+      return;
+    }
 
-  const handleSecurityChange = (key: keyof SecuritySettings, value: boolean | number) => {
-    setSecurity(prev => ({ ...prev, [key]: value }));
-  };
+    if (passwordForm.newPassword.length < 8) {
+      toast({
+        title: "Erro na validação",
+        description: "A nova senha deve ter pelo menos 8 caracteres.",
+        variant: "destructive",
+      });
+      return;
+    }
 
-  const handlePasswordChange = () => {
-    // Aqui você implementaria a lógica para alterar a senha
-    console.log('Alterando senha...');
-    setPasswordForm({ currentPassword: '', newPassword: '', confirmPassword: '' });
-  };
+    try {
+      await userService.changePassword({
+        current_password: passwordForm.currentPassword,
+        password: passwordForm.newPassword,
+        password_confirmation: passwordForm.confirmPassword,
+      });
 
-  const handleExportData = () => {
-    // Aqui você implementaria a lógica para exportar dados
-    console.log('Exportando dados do usuário...');
+      setPasswordForm({ currentPassword: '', newPassword: '', confirmPassword: '' });
+
+      toast({
+        title: "Senha alterada",
+        description: "Sua senha foi alterada com sucesso.",
+      });
+    } catch (error) {
+      toast({
+        title: "Erro ao alterar senha",
+        description: error instanceof Error ? error.message : "Ocorreu um erro inesperado.",
+        variant: "destructive",
+      });
+    }
   };
 
   const handleDeleteAccount = async () => {
@@ -205,6 +188,66 @@ const Profile = () => {
     } finally {
       setIsDeleting(false);
     }
+  };
+
+  const handleImageUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file || !user || !token) return;
+
+    // Validar tipo de arquivo
+    if (!file.type.startsWith('image/')) {
+      toast({
+        title: "Arquivo inválido",
+        description: "Por favor, selecione uma imagem válida.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Validar tamanho (máximo 5MB)
+    if (file.size > 5 * 1024 * 1024) {
+      toast({
+        title: "Arquivo muito grande",
+        description: "A imagem deve ter no máximo 5MB.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsUploadingImage(true);
+    try {
+      // Upload da imagem de perfil usando o novo service
+      const uploadResult = await uploadService.uploadProfileImage(file, user.id);
+
+      // Atualizar perfil do usuário com a nova URL da imagem
+      await updateUser({
+        profile_picture: uploadResult.publicUrl
+      });
+
+      // Atualizar estado local
+      setProfile(prev => ({ ...prev, avatar: uploadResult.publicUrl }));
+
+      toast({
+        title: "Foto atualizada",
+        description: "Sua foto de perfil foi atualizada com sucesso.",
+      });
+    } catch (error) {
+      toast({
+        title: "Erro ao fazer upload",
+        description: error instanceof Error ? error.message : "Ocorreu um erro inesperado.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsUploadingImage(false);
+      // Limpar input
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
+    }
+  };
+
+  const triggerFileInput = () => {
+    fileInputRef.current?.click();
   };
 
   const planConfig = {
@@ -274,15 +317,22 @@ const Profile = () => {
                       {profile.name.split(' ').map(n => n[0]).join('')}
                     </AvatarFallback>
                   </Avatar>
-                  {isEditing && (
-                    <Button
-                      size="icon"
-                      variant="outline"
-                      className="absolute -bottom-2 -right-2 h-8 w-8 rounded-full"
-                    >
-                      <Camera className="h-4 w-4" />
-                    </Button>
-                  )}
+                  <Button
+                    size="icon"
+                    variant="outline"
+                    className="absolute -bottom-2 -right-2 h-8 w-8 rounded-full"
+                    onClick={triggerFileInput}
+                    disabled={isUploadingImage}
+                  >
+                    <Camera className="h-4 w-4" />
+                  </Button>
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept="image/*"
+                    onChange={handleImageUpload}
+                    className="hidden"
+                  />
                 </div>
                 <div className="space-y-1">
                   <h3 className="text-lg font-medium">{profile.name}</h3>
@@ -298,6 +348,11 @@ const Profile = () => {
                       Membro desde {new Date(profile.joinedAt).toLocaleDateString('pt-BR')}
                     </span>
                   </div>
+                  {isUploadingImage && (
+                    <p className="text-xs text-muted-foreground">
+                      {isUploadingImage ? 'Atualizando foto...' : ''}
+                    </p>
+                  )}
                 </div>
               </div>
 
@@ -340,100 +395,6 @@ const Profile = () => {
             </CardContent>
           </Card>
         </TabsContent>
-
-        {/* Notifications Tab 
-        <TabsContent value="notifications" className="space-y-6">
-          <Card>
-            <CardHeader>
-              <CardTitle>Configurações de Notificação</CardTitle>
-              <CardDescription>
-                Escolha como e quando você quer receber notificações
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-6">
-              <div className="space-y-4">
-                <div className="flex items-center justify-between">
-                  <div className="space-y-0.5">
-                    <Label>Notificações por email</Label>
-                    <p className="text-sm text-muted-foreground">
-                      Receba atualizações importantes por email
-                    </p>
-                  </div>
-                  <Switch
-                    checked={notifications.emailNotifications}
-                    onCheckedChange={(checked) => handleNotificationChange('emailNotifications', checked)}
-                  />
-                </div>
-
-                <div className="flex items-center justify-between">
-                  <div className="space-y-0.5">
-                    <Label>Notificações push</Label>
-                    <p className="text-sm text-muted-foreground">
-                      Receba notificações em tempo real no navegador
-                    </p>
-                  </div>
-                  <Switch
-                    checked={notifications.pushNotifications}
-                    onCheckedChange={(checked) => handleNotificationChange('pushNotifications', checked)}
-                  />
-                </div>
-
-                <div className="flex items-center justify-between">
-                  <div className="space-y-0.5">
-                    <Label>Alertas de novos leads</Label>
-                    <p className="text-sm text-muted-foreground">
-                      Seja notificado quando capturar novos leads
-                    </p>
-                  </div>
-                  <Switch
-                    checked={notifications.leadAlerts}
-                    onCheckedChange={(checked) => handleNotificationChange('leadAlerts', checked)}
-                  />
-                </div>
-
-                <div className="flex items-center justify-between">
-                  <div className="space-y-0.5">
-                    <Label>Atualizações de campanhas</Label>
-                    <p className="text-sm text-muted-foreground">
-                      Receba relatórios sobre performance das campanhas
-                    </p>
-                  </div>
-                  <Switch
-                    checked={notifications.campaignUpdates}
-                    onCheckedChange={(checked) => handleNotificationChange('campaignUpdates', checked)}
-                  />
-                </div>
-
-                <div className="flex items-center justify-between">
-                  <div className="space-y-0.5">
-                    <Label>Relatórios semanais</Label>
-                    <p className="text-sm text-muted-foreground">
-                      Resumo semanal das suas métricas
-                    </p>
-                  </div>
-                  <Switch
-                    checked={notifications.weeklyReports}
-                    onCheckedChange={(checked) => handleNotificationChange('weeklyReports', checked)}
-                  />
-                </div>
-
-                <div className="flex items-center justify-between">
-                  <div className="space-y-0.5">
-                    <Label>Emails de marketing</Label>
-                    <p className="text-sm text-muted-foreground">
-                      Dicas, novidades e ofertas especiais
-                    </p>
-                  </div>
-                  <Switch
-                    checked={notifications.marketingEmails}
-                    onCheckedChange={(checked) => handleNotificationChange('marketingEmails', checked)}
-                  />
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
-        */}
 
         {/* Security Tab */}
         <TabsContent value="security" className="space-y-6">

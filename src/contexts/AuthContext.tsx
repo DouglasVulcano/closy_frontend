@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback, ReactNode } from 'react';
-import { API_BASE_URL } from '../constants/auth';
+import { authService, userService } from '@/services';
 import { AuthContext, type User, type AuthContextType, type RegisterData, type UpdateUserData } from './AuthContextDefinition';
 
 export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
@@ -18,13 +18,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const logout = useCallback(async () => {
     try {
       if (token) {
-        await fetch(`${API_BASE_URL}/logout`, {
-          method: 'DELETE',
-          headers: {
-            'Authorization': `Bearer ${token}`,
-            'Accept': 'application/json',
-          },
-        });
+        await authService.logout();
       }
     } catch (error) {
       console.error('Logout error:', error);
@@ -35,21 +29,10 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     }
   }, [token]);
 
-  const fetchUser = useCallback(async (authToken: string) => {
+  const fetchUser = useCallback(async () => {
     try {
-      const response = await fetch(`${API_BASE_URL}/user`, {
-        headers: {
-          'Authorization': `Bearer ${authToken}`,
-          'Accept': 'application/json',
-        },
-      });
-
-      if (response.ok) {
-        const userData = await response.json();
-        setUser(userData);
-      } else {
-        throw new Error('Failed to fetch user');
-      }
+      const userData = await authService.getCurrentUser();
+      setUser(userData);
     } catch (error) {
       console.error('Error fetching user:', error);
       logout();
@@ -58,31 +41,15 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
   const login = async (email: string, password: string, recaptchaToken: string) => {
     try {
-      const response = await fetch(`${API_BASE_URL}/login`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Accept': 'application/json',
-        },
-        body: JSON.stringify({
-          email,
-          password,
-          recaptcha_token: recaptchaToken,
-        }),
+      const response = await authService.login({
+        email,
+        password,
+        recaptcha_token: recaptchaToken,
       });
 
-      if (response.ok) {
-        const data = await response.json();
-        const authToken = data.token;
-
-        localStorage.setItem('token', authToken);
-        setToken(authToken);
-
-        await fetchUser(authToken);
-      } else {
-        const errorData = await response.json();
-        throw new Error(errorData.message || 'Login failed');
-      }
+      localStorage.setItem('token', response.token);
+      setToken(response.token);
+      setUser(response.user);
     } catch (error) {
       console.error('Login error:', error);
       throw error;
@@ -91,26 +58,11 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
   const register = async (data: RegisterData) => {
     try {
-      const response = await fetch(`${API_BASE_URL}/register`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Accept': 'application/json',
-        },
-        body: JSON.stringify(data),
-      });
+      const response = await authService.register(data);
 
-      if (response.ok) {
-        const responseData = await response.json();
-        const authToken = responseData.token;
-
-        localStorage.setItem('token', authToken);
-        setToken(authToken);
-        setUser(responseData.user);
-      } else {
-        const errorData = await response.json();
-        throw new Error(errorData.message || 'Registration failed');
-      }
+      localStorage.setItem('token', response.token);
+      setToken(response.token);
+      setUser(response.user);
     } catch (error) {
       console.error('Registration error:', error);
       throw error;
@@ -119,23 +71,8 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
   const updateUser = async (data: UpdateUserData) => {
     try {
-      const response = await fetch(`${API_BASE_URL}/user`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-          'Accept': 'application/json',
-          'Authorization': `Bearer ${token}`,
-        },
-        body: JSON.stringify(data),
-      });
-
-      if (response.ok) {
-        const updatedUser = await response.json();
-        setUser(updatedUser);
-      } else {
-        const errorData = await response.json();
-        throw new Error(errorData.message || 'Failed to update user');
-      }
+      const updatedUser = await userService.updateProfile(data);
+      setUser(updatedUser);
     } catch (error) {
       console.error('Update user error:', error);
       throw error;
@@ -144,22 +81,10 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
   const deleteUser = async () => {
     try {
-      const response = await fetch(`${API_BASE_URL}/user`, {
-        method: 'DELETE',
-        headers: {
-          'Accept': 'application/json',
-          'Authorization': `Bearer ${token}`,
-        },
-      });
-
-      if (response.ok) {
-        localStorage.removeItem('token');
-        setToken(null);
-        setUser(null);
-      } else {
-        const errorData = await response.json();
-        throw new Error(errorData.message || 'Failed to delete user');
-      }
+      await userService.deleteAccount();
+      localStorage.removeItem('token');
+      setToken(null);
+      setUser(null);
     } catch (error) {
       console.error('Delete user error:', error);
       throw error;
@@ -168,23 +93,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
   const getPortalUrl = async (returnUrl?: string) => {
     try {
-      const response = await fetch(`${API_BASE_URL}/portal`, {
-        method: 'GET',
-        headers: {
-          'Content-Type': 'application/json',
-          'Accept': 'application/json',
-          'Authorization': `Bearer ${token}`,
-        },
-        body: JSON.stringify({ return_url: returnUrl || '' }),
-      });
-
-      if (response.ok) {
-        const data = await response.json();
-        return data.portal_url;
-      } else {
-        const errorData = await response.json();
-        throw new Error(errorData.message || 'Failed to get portal URL');
-      }
+      return await authService.getPortalUrl(returnUrl);
     } catch (error) {
       console.error('Get portal URL error:', error);
       throw error;
@@ -194,7 +103,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   useEffect(() => {
     const initAuth = async () => {
       if (token) {
-        await fetchUser(token);
+        await fetchUser();
       }
       setLoading(false);
     };

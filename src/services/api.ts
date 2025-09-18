@@ -18,6 +18,20 @@ export interface CheckoutResponse {
   checkout_url: string;
 }
 
+export interface PresignedUrlRequest {
+  file_name: string;
+  content_type: string;
+  directory: string;
+}
+
+export interface PresignedUrlResponse {
+  presigned_url: string;
+  file_name: string;
+  content_type: string;
+  expiration_minutes: number;
+  public_url: string;
+}
+
 export const apiService = {
   async getPlans(token: string): Promise<Plan[]> {
     const response = await fetch(`${API_BASE_URL}/plans`, {
@@ -59,5 +73,40 @@ export const apiService = {
     }
 
     return response.json();
+  },
+
+  async getPresignedUrl(
+    token: string,
+    request: PresignedUrlRequest
+  ): Promise<PresignedUrlResponse> {
+    const response = await fetch(`${API_BASE_URL}/s3/presigned-url`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json',
+        'Accept': 'application/json',
+      },
+      body: JSON.stringify(request),
+    });
+
+    if (!response.ok) {
+      throw new Error('Failed to get presigned URL');
+    }
+
+    return response.json();
+  },
+
+  async uploadImageToS3(presignedUrl: string, file: File): Promise<void> {
+    const response = await fetch(presignedUrl, {
+      method: 'PUT',
+      body: file,
+      headers: {
+        'Content-Type': file.type,
+      },
+    });
+
+    if (!response.ok) {
+      throw new Error('Failed to upload image to S3');
+    }
   },
 };

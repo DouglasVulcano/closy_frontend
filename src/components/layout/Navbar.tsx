@@ -8,11 +8,8 @@ import {
   User,
   Settings,
   LogOut,
-  Bell,
-  Search
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import {
   DropdownMenu,
@@ -22,7 +19,6 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 import { BottomMenu } from './BottomMenu';
 
@@ -37,7 +33,6 @@ export const Navbar = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const { user, logout } = useAuth();
-  const [searchQuery, setSearchQuery] = useState('');
 
   const handleLogout = async () => {
     try {
@@ -97,24 +92,12 @@ export const Navbar = () => {
 
           {/* Right side actions */}
           <div className="flex items-center space-x-2 ml-auto">
-            {/* Notifications 
-            <Button variant="ghost" size="icon" className="relative">
-              <Bell className="h-5 w-5" />
-              <Badge
-                variant="destructive"
-                className="absolute -top-1 -right-1 h-5 w-5 rounded-full p-0 flex items-center justify-center text-xs"
-              >
-                3
-              </Badge>
-            </Button>
-            */}
-
             {/* User menu */}
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button variant="ghost" className="relative h-9 w-9 rounded-full">
                   <Avatar className="h-9 w-9">
-                    <AvatarImage src="/placeholder.svg" alt={`@${user?.name}`} />
+                    <AvatarImage src={user?.profile_picture || '/placeholder.svg'} alt={`@${user?.name}`} />
                     <AvatarFallback className="bg-primary text-primary-foreground">
                       {user?.name ? getUserInitials(user.name) : 'U'}
                     </AvatarFallback>
