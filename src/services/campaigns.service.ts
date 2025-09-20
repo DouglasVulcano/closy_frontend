@@ -9,27 +9,24 @@ import type {
 } from '@/types/api';
 
 export interface CreateCampaignData {
-  name: string;
-  description?: string;
-  target_url: string;
-  settings?: Record<string, unknown>;
+  title: string;
+  slug: string;
 }
 
 export interface UpdateCampaignData {
-  name?: string;
-  description?: string;
-  target_url?: string;
-  status?: 'active' | 'paused' | 'completed';
-  settings?: Record<string, unknown>;
+  title?: string;
+  slug?: string;
+  status?: 'draft' | 'active' | 'paused' | 'completed';
+  start_date?: string | null;
+  end_date?: string | null;
+  details?: unknown;
 }
 
 export interface CampaignFilters {
-  status?: 'active' | 'paused' | 'completed';
-  search?: string;
+  status?: 'draft' | 'active' | 'paused' | 'completed';
+  title?: string;
   page?: number;
   per_page?: number;
-  sort_by?: 'name' | 'created_at' | 'updated_at';
-  sort_order?: 'asc' | 'desc';
 }
 
 export interface CampaignStats {
@@ -52,7 +49,7 @@ export class CampaignsService {
    */
   async getCampaigns(filters: CampaignFilters = {}): Promise<PaginatedResponse<Campaign>> {
     const params = new URLSearchParams();
-    
+
     Object.entries(filters).forEach(([key, value]) => {
       if (value !== undefined && value !== null) {
         params.append(key, value.toString());
@@ -60,8 +57,8 @@ export class CampaignsService {
     });
 
     const queryString = params.toString();
-    const endpoint = queryString ? `/campaigns?${queryString}` : '/campaigns';
-    
+    const endpoint = queryString ? `/campaign?${queryString}` : '/campaign';
+
     return httpClient.get<PaginatedResponse<Campaign>>(endpoint);
   }
 
@@ -76,42 +73,28 @@ export class CampaignsService {
    * Criar nova campanha
    */
   async createCampaign(data: CreateCampaignData): Promise<Campaign> {
-    return httpClient.post<Campaign>('/campaigns', data);
+    return httpClient.post<Campaign>('/campaign', data);
   }
 
   /**
    * Atualizar campanha
    */
   async updateCampaign(id: number, data: UpdateCampaignData): Promise<Campaign> {
-    return httpClient.put<Campaign>(`/campaigns/${id}`, data);
+    return httpClient.put<Campaign>(`/campaign/${id}`, data);
+  }
+
+  /**
+   * Atualizar status da campanha
+   */
+  async updateCampaignStatus(id: number, status: 'draft' | 'active' | 'paused' | 'completed'): Promise<Campaign> {
+    return httpClient.put<Campaign>(`/campaign/${id}`, { status });
   }
 
   /**
    * Excluir campanha
    */
   async deleteCampaign(id: number): Promise<void> {
-    await httpClient.delete(`/campaigns/${id}`);
-  }
-
-  /**
-   * Duplicar campanha
-   */
-  async duplicateCampaign(id: number, name?: string): Promise<Campaign> {
-    return httpClient.post<Campaign>(`/campaigns/${id}/duplicate`, { name });
-  }
-
-  /**
-   * Pausar campanha
-   */
-  async pauseCampaign(id: number): Promise<Campaign> {
-    return httpClient.patch<Campaign>(`/campaigns/${id}/pause`);
-  }
-
-  /**
-   * Ativar campanha
-   */
-  async activateCampaign(id: number): Promise<Campaign> {
-    return httpClient.patch<Campaign>(`/campaigns/${id}/activate`);
+    await httpClient.delete(`/campaign/${id}`);
   }
 
   /**
@@ -122,17 +105,17 @@ export class CampaignsService {
     dateRange?: { start: string; end: string }
   ): Promise<CampaignStats> {
     const params = new URLSearchParams();
-    
+
     if (dateRange) {
       params.append('start_date', dateRange.start);
       params.append('end_date', dateRange.end);
     }
 
     const queryString = params.toString();
-    const endpoint = queryString 
-      ? `/campaigns/${id}/stats?${queryString}` 
+    const endpoint = queryString
+      ? `/campaigns/${id}/stats?${queryString}`
       : `/campaigns/${id}/stats`;
-    
+
     return httpClient.get<CampaignStats>(endpoint);
   }
 

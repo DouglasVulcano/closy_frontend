@@ -142,6 +142,14 @@ export class PlansService {
   async removePaymentMethod(paymentMethodId: string): Promise<void> {
     await httpClient.delete(`/subscription/payment-methods/${paymentMethodId}`);
   }
+
+  /**
+   * Obter URL do portal de gerenciamento do Stripe
+   */
+  async getPortalUrl(returnUrl?: string): Promise<{ portal_url: string }> {
+    const data = returnUrl ? { return_url: returnUrl } : {};
+    return httpClient.post<{ portal_url: string }>('/stripe/portal', data);
+  }
 }
 
 // Exportar instância singleton

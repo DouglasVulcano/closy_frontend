@@ -1,23 +1,23 @@
-import { useState } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import {
     Plus,
     Search,
     Filter,
     MoreHorizontal,
-    Eye,
     Edit,
     Trash2,
-    Play,
-    Pause,
     BarChart3,
     Users,
     TrendingUp,
     Megaphone,
+    Settings,
+    ToggleLeft,
+    ExternalLink,
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
+import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import {
     DropdownMenu,
@@ -43,78 +43,16 @@ import {
     DialogTitle,
 } from '@/components/ui/dialog';
 import { Link } from 'react-router-dom';
+import { campaignsService, CampaignFilters } from '../services/campaigns.service';
+import { Campaign, PaginatedResponse } from '../types/api';
+import { DataPagination } from '../components/ui/data-pagination';
+import { CampaignsPageSkeleton } from '../components/skeletons';
+import { useToast } from '../hooks/use-toast';
+import { useConfirm } from '../hooks/useConfirm';
+import { CampaignStatusDialog } from '../components/campaigns/CampaignStatusDialog';
+import { CampaignModal, CampaignFormData } from '../components/campaigns/CampaignModal';
 
 type CampaignStatus = 'active' | 'paused' | 'draft' | 'completed';
-
-interface Campaign {
-    id: string;
-    name: string;
-    description: string;
-    status: CampaignStatus;
-    leads: number;
-    conversion: number;
-    createdAt: string;
-    updatedAt: string;
-    thumbnail?: string;
-}
-
-const campaigns: Campaign[] = [
-    {
-        id: '1',
-        name: 'Campanha Black Friday 2024',
-        description: 'Promoção especial para Black Friday com desconto de 50%',
-        status: 'active',
-        leads: 234,
-        conversion: 4.2,
-        createdAt: '2024-01-15T10:00:00Z',
-        updatedAt: '2024-01-15T14:30:00Z',
-        thumbnail: '/placeholder.svg'
-    },
-    {
-        id: '2',
-        name: 'Webinar Marketing Digital',
-        description: 'Webinar gratuito sobre estratégias de marketing digital',
-        status: 'active',
-        leads: 156,
-        conversion: 3.8,
-        createdAt: '2024-01-12T09:00:00Z',
-        updatedAt: '2024-01-14T16:20:00Z',
-        thumbnail: '/placeholder.svg'
-    },
-    {
-        id: '3',
-        name: 'E-book Gratuito',
-        description: 'Download gratuito do nosso e-book sobre vendas',
-        status: 'paused',
-        leads: 89,
-        conversion: 2.1,
-        createdAt: '2024-01-10T11:00:00Z',
-        updatedAt: '2024-01-13T10:15:00Z',
-        thumbnail: '/placeholder.svg'
-    },
-    {
-        id: '4',
-        name: 'Curso Online',
-        description: 'Inscrições para o curso online de empreendedorismo',
-        status: 'draft',
-        leads: 0,
-        conversion: 0,
-        createdAt: '2024-01-08T15:00:00Z',
-        updatedAt: '2024-01-08T15:00:00Z',
-        thumbnail: '/placeholder.svg'
-    },
-    {
-        id: '5',
-        name: 'Newsletter Semanal',
-        description: 'Cadastro para receber nossa newsletter semanal',
-        status: 'completed',
-        leads: 1200,
-        conversion: 8.0,
-        createdAt: '2023-12-01T10:00:00Z',
-        updatedAt: '2024-01-01T00:00:00Z',
-        thumbnail: '/placeholder.svg'
-    },
-];
 
 const statusConfig = {
     active: { label: 'Ativa', variant: 'default' as const, color: 'text-green-600' },
@@ -124,60 +62,251 @@ const statusConfig = {
 };
 
 const Campaigns = () => {
-    const [searchQuery, setSearchQuery] = useState('');
-    const [statusFilter, setStatusFilter] = useState<string>('all');
-    const [sortBy, setSortBy] = useState<string>('updated');
-    const [isModalOpen, setIsModalOpen] = useState(false);
-    const [newCampaign, setNewCampaign] = useState({
-        title: '',
-        url: ''
-    });
+    const [searchTerm, setSearchTerm] = useState('');
+    const [statusFilter, setStatusFilter] = useState<CampaignStatus | 'all'>('all');
+    const [isCampaignModalOpen, setIsCampaignModalOpen] = useState(false);
+    const [editingCampaign, setEditingCampaign] = useState<Campaign | null>(null);
+    const [isUploading, setIsUploading] = useState(false);
+    const [campaigns, setCampaigns] = useState<Campaign[]>([]);
+    const [isLoading, setIsLoading] = useState(true);
+    const [pagination, setPagination] = useState<PaginatedResponse<Campaign> | null>(null);
+    const [currentPage, setCurrentPage] = useState(1);
+    const [statusDialogOpen, setStatusDialogOpen] = useState(false);
+    const [selectedCampaignForStatus, setSelectedCampaignForStatus] = useState<Campaign | null>(null);
+    const { toast } = useToast();
+    const { confirm, ConfirmComponent } = useConfirm();
 
-    const filteredCampaigns = campaigns.filter(campaign => {
-        const matchesSearch = campaign.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-            campaign.description.toLowerCase().includes(searchQuery.toLowerCase());
-        const matchesStatus = statusFilter === 'all' || campaign.status === statusFilter;
-        return matchesSearch && matchesStatus;
-    });
+    // Função para carregar campanhas
+    const loadCampaigns = useCallback(async () => {
+        try {
+            setIsLoading(true);
+            const filters: CampaignFilters = {
+                page: currentPage,
+                per_page: 10
+            };
 
-    const sortedCampaigns = [...filteredCampaigns].sort((a, b) => {
-        switch (sortBy) {
-            case 'name':
-                return a.name.localeCompare(b.name);
-            case 'leads':
-                return b.leads - a.leads;
-            case 'conversion':
-                return b.conversion - a.conversion;
-            case 'created':
-                return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
-            default: // updated
-                return new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime();
+            if (statusFilter !== 'all') {
+                filters.status = statusFilter;
+            }
+
+            if (searchTerm.trim()) {
+                filters.title = searchTerm.trim();
+            }
+
+            const response = await campaignsService.getCampaigns(filters);
+            setCampaigns(response.data);
+            setPagination(response);
+        } catch (error) {
+            console.error('Erro ao carregar campanhas:', error);
+        } finally {
+            setIsLoading(false);
         }
-    });
+    }, [currentPage, statusFilter, searchTerm]);
 
-    const handleStatusChange = (campaignId: string, newStatus: CampaignStatus) => {
-        // Aqui você implementaria a lógica para alterar o status da campanha
-        console.log(`Alterando status da campanha ${campaignId} para ${newStatus}`);
-    };
+    // Carregar campanhas quando o componente montar ou filtros mudarem
+    useEffect(() => {
+        loadCampaigns();
+    }, [currentPage, statusFilter, searchTerm, loadCampaigns]);
 
-    const handleDelete = (campaignId: string) => {
-        // Aqui você implementaria a lógica para excluir a campanha
-        console.log(`Excluindo campanha ${campaignId}`);
-    };
+    // Função para salvar campanha (criação ou edição)
+    const handleSaveCampaign = async (data: CampaignFormData) => {
+        try {
+            setIsUploading(true);
 
-    const handleCreateCampaign = () => {
-        if (newCampaign.title.trim() && newCampaign.url.trim()) {
-            // Aqui você implementaria a lógica para criar a campanha
-            console.log('Criando nova campanha:', newCampaign);
-            setIsModalOpen(false);
-            setNewCampaign({ title: '', url: '' });
+            if (editingCampaign) {
+                // Modo edição
+                await campaignsService.updateCampaign(editingCampaign.id, data);
+                toast({
+                    title: "Campanha atualizada",
+                    description: `A campanha "${data.title}" foi atualizada com sucesso.`,
+                });
+            } else {
+                // Modo criação
+                await campaignsService.createCampaign(data);
+                toast({
+                    title: "Campanha criada",
+                    description: `A campanha "${data.title}" foi criada com sucesso.`,
+                });
+            }
+
+            setIsCampaignModalOpen(false);
+            setEditingCampaign(null);
+            loadCampaigns(); // Recarregar a lista
+        } catch (error) {
+            console.error('Erro ao salvar campanha:', error);
+            toast({
+                title: "Erro",
+                description: editingCampaign 
+                    ? "Não foi possível atualizar a campanha."
+                    : "Não foi possível criar a campanha.",
+                variant: "destructive",
+            });
+        } finally {
+            setIsUploading(false);
         }
     };
 
-    const handleModalClose = () => {
-        setIsModalOpen(false);
-        setNewCampaign({ title: '', url: '' });
+    // Função para abrir modal de criação
+    const handleOpenCreateModal = () => {
+        setEditingCampaign(null);
+        setIsCampaignModalOpen(true);
     };
+
+    // Função para abrir modal de edição
+    const handleOpenEditModal = (campaign: Campaign) => {
+        setEditingCampaign(campaign);
+        setIsCampaignModalOpen(true);
+    };
+
+    // Função para fechar modal
+    const handleCloseModal = () => {
+        setIsCampaignModalOpen(false);
+        setEditingCampaign(null);
+    };
+
+    const filteredCampaigns = campaigns;
+
+    // Usar campanhas filtradas diretamente
+    const sortedCampaigns = filteredCampaigns;
+
+    const handleStatusChange = async (campaignId: number, newStatus: CampaignStatus) => {
+        try {
+            const campaign = campaigns.find(c => c.id === campaignId);
+            if (!campaign) return;
+
+            // Se o status não mudou, não fazer nada
+            if (campaign.status === newStatus) return;
+
+            // Verificações específicas para cada status
+            let needsConfirmation = false;
+            let confirmationConfig = {
+                title: '',
+                description: '',
+                confirmText: 'Continuar',
+                cancelText: 'Cancelar',
+                variant: 'default' as const
+            };
+
+            // Verificar se a data de início é maior que o horário atual ao ativar
+            if (newStatus === 'active' && campaign.start_date) {
+                const startDate = new Date(campaign.start_date);
+                const now = new Date();
+                if (startDate > now) {
+                    needsConfirmation = true;
+                    confirmationConfig = {
+                        title: 'Alterar data de início',
+                        description: 'A data de início configurada será alterada para o horário atual. Deseja continuar?',
+                        confirmText: 'Continuar',
+                        cancelText: 'Cancelar',
+                        variant: 'default'
+                    };
+                }
+            }
+
+            // Confirmação para marcar como concluída
+            if (newStatus === 'completed') {
+                needsConfirmation = true;
+                confirmationConfig = {
+                    title: 'Marcar como concluída',
+                    description: 'Tem certeza que deseja marcar esta campanha como concluída? Campanhas concluídas param de coletar leads.',
+                    confirmText: 'Marcar como concluída',
+                    cancelText: 'Cancelar',
+                    variant: 'default'
+                };
+            }
+
+            // Confirmação para voltar para rascunho se estava ativa
+            if (newStatus === 'draft' && campaign.status === 'active') {
+                needsConfirmation = true;
+                confirmationConfig = {
+                    title: 'Voltar para rascunho',
+                    description: 'A campanha ativa será pausada e voltará para o estado de rascunho. Deseja continuar?',
+                    confirmText: 'Continuar',
+                    cancelText: 'Cancelar',
+                    variant: 'default'
+                };
+            }
+
+            // Mostrar confirmação se necessário
+            if (needsConfirmation) {
+                const confirmed = await confirm(confirmationConfig);
+                if (!confirmed) return;
+            }
+
+            // Atualizar status
+            await campaignsService.updateCampaignStatus(campaignId, newStatus);
+
+            // Recarregar a lista completa para garantir sincronização
+            await loadCampaigns();
+
+            toast({
+                title: "Status atualizado",
+                description: `Campanha "${campaign.title}" agora está ${statusConfig[newStatus].label.toLowerCase()}.`,
+            });
+
+        } catch (error) {
+            console.error('Erro ao alterar status da campanha:', error);
+            toast({
+                title: "Erro",
+                description: "Não foi possível alterar o status da campanha.",
+                variant: "destructive",
+            });
+        }
+    };
+
+    const handleDelete = async (campaignId: number) => {
+        try {
+            const campaign = campaigns.find(c => c.id === campaignId);
+            if (!campaign) return;
+
+            // Confirmar deleção
+            const confirmed = await confirm({
+                title: 'Excluir campanha',
+                description: `Tem certeza que deseja excluir a campanha "${campaign.title}"? Esta ação não pode ser desfeita.`,
+                confirmText: 'Excluir',
+                cancelText: 'Cancelar',
+                variant: 'destructive'
+            });
+            if (!confirmed) return;
+
+            // Excluir campanha
+            await campaignsService.deleteCampaign(campaignId);
+
+            // Remover da lista local
+            setCampaigns(prev => prev.filter(c => c.id !== campaignId));
+
+            toast({
+                title: "Campanha excluída",
+                description: `A campanha "${campaign.title}" foi excluída com sucesso.`,
+            });
+
+            // Recarregar a lista para atualizar a paginação
+            loadCampaigns();
+
+        } catch (error) {
+            console.error('Erro ao excluir campanha:', error);
+            toast({
+                title: "Erro",
+                description: "Não foi possível excluir a campanha.",
+                variant: "destructive",
+            });
+        }
+    };
+
+    const handleOpenStatusDialog = (campaign: Campaign) => {
+        setSelectedCampaignForStatus(campaign);
+        setStatusDialogOpen(true);
+    };
+
+    const handleCloseStatusDialog = () => {
+        setStatusDialogOpen(false);
+        setSelectedCampaignForStatus(null);
+    };
+
+    // Renderizar skeleton durante o loading
+    if (isLoading) {
+        return <CampaignsPageSkeleton />;
+    }
 
     return (
         <div className="space-y-6">
@@ -189,14 +318,14 @@ const Campaigns = () => {
                         Gerencie suas campanhas de captação de leads
                     </p>
                 </div>
-                <Button onClick={() => setIsModalOpen(true)}>
+                <Button onClick={handleOpenCreateModal}>
                     <Plus className="h-4 w-4 mr-2" />
                     Nova Campanha
                 </Button>
             </div>
 
             {/* Stats Cards */}
-            <div className="grid gap-4 md:grid-cols-4">
+            <div className="grid gap-4 md:grid-cols-3">
                 <Card>
                     <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                         <CardTitle className="text-sm font-medium">Total de Campanhas</CardTitle>
@@ -217,7 +346,7 @@ const Campaigns = () => {
                     </CardHeader>
                     <CardContent>
                         <div className="text-2xl font-bold">
-                            {campaigns.reduce((sum, c) => sum + c.leads, 0).toLocaleString()}
+                            {campaigns.reduce((sum, c) => sum + c.leads_count, 0).toLocaleString()}
                         </div>
                         <p className="text-xs text-muted-foreground">
                             Todos os tempos
@@ -232,7 +361,7 @@ const Campaigns = () => {
                     </CardHeader>
                     <CardContent>
                         <div className="text-2xl font-bold">
-                            {(campaigns.reduce((sum, c) => sum + c.conversion, 0) / campaigns.length).toFixed(1)}%
+                            {campaigns.length > 0 ? (campaigns.reduce((sum, c) => sum + parseFloat(c.conversion), 0) / campaigns.length).toFixed(1) : '0'}%
                         </div>
                         <p className="text-xs text-muted-foreground">
                             Média geral
@@ -250,15 +379,15 @@ const Campaigns = () => {
                                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                                 <Input
                                     placeholder="Buscar campanhas..."
-                                    value={searchQuery}
-                                    onChange={(e) => setSearchQuery(e.target.value)}
+                                    value={searchTerm}
+                                    onChange={(e) => setSearchTerm(e.target.value)}
                                     className="pl-10"
                                 />
                             </div>
                         </div>
 
                         <div className="flex gap-2">
-                            <Select value={statusFilter} onValueChange={setStatusFilter}>
+                            <Select value={statusFilter} onValueChange={(value) => setStatusFilter(value as CampaignStatus | 'all')}>
                                 <SelectTrigger className="w-[140px]">
                                     <Filter className="h-4 w-4 mr-2" />
                                     <SelectValue placeholder="Status" />
@@ -269,19 +398,6 @@ const Campaigns = () => {
                                     <SelectItem value="paused">Pausadas</SelectItem>
                                     <SelectItem value="draft">Rascunhos</SelectItem>
                                     <SelectItem value="completed">Concluídas</SelectItem>
-                                </SelectContent>
-                            </Select>
-
-                            <Select value={sortBy} onValueChange={setSortBy}>
-                                <SelectTrigger className="w-[140px]">
-                                    <SelectValue placeholder="Ordenar" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    <SelectItem value="updated">Mais recentes</SelectItem>
-                                    <SelectItem value="created">Data de criação</SelectItem>
-                                    <SelectItem value="name">Nome</SelectItem>
-                                    <SelectItem value="leads">Mais leads</SelectItem>
-                                    <SelectItem value="conversion">Conversão</SelectItem>
                                 </SelectContent>
                             </Select>
                         </div>
@@ -296,7 +412,7 @@ const Campaigns = () => {
                                     <div className="flex items-start justify-between">
                                         <div className="flex items-center gap-3">
                                             <div className="flex-1 min-w-0">
-                                                <CardTitle className="text-base truncate">{campaign.name}</CardTitle>
+                                                <CardTitle className="text-base truncate">{campaign.title}</CardTitle>
                                                 <Badge
                                                     variant={statusConfig[campaign.status].variant}
                                                     className="mt-1"
@@ -314,34 +430,24 @@ const Campaigns = () => {
                                             </DropdownMenuTrigger>
                                             <DropdownMenuContent align="end">
                                                 <DropdownMenuLabel>Ações</DropdownMenuLabel>
-                                                <DropdownMenuItem asChild>
-                                                    <Link to={`/campaigns/${campaign.id}`}>
-                                                        <Eye className="mr-2 h-4 w-4" />
-                                                        Visualizar
-                                                    </Link>
+                                                <DropdownMenuItem onClick={() => handleOpenEditModal(campaign)}>
+                                                    <Edit className="mr-2 h-4 w-4" />
+                                                    Editar
+                                                </DropdownMenuItem>
+                                                <DropdownMenuItem onClick={() => handleOpenStatusDialog(campaign)}>
+                                                    <ToggleLeft className="mr-2 h-4 w-4" />
+                                                    Alterar Status
                                                 </DropdownMenuItem>
                                                 <DropdownMenuItem asChild>
                                                     <Link to={`/campaigns/edit/${campaign.id}`}>
-                                                        <Edit className="mr-2 h-4 w-4" />
-                                                        Editar
+                                                        <ExternalLink className="mr-2 h-4 w-4" />
+                                                        Edição Avançada
                                                     </Link>
                                                 </DropdownMenuItem>
                                                 <DropdownMenuSeparator />
-                                                {campaign.status === 'active' ? (
-                                                    <DropdownMenuItem onClick={() => handleStatusChange(campaign.id, 'paused')}>
-                                                        <Pause className="mr-2 h-4 w-4" />
-                                                        Pausar
-                                                    </DropdownMenuItem>
-                                                ) : campaign.status === 'paused' ? (
-                                                    <DropdownMenuItem onClick={() => handleStatusChange(campaign.id, 'active')}>
-                                                        <Play className="mr-2 h-4 w-4" />
-                                                        Ativar
-                                                    </DropdownMenuItem>
-                                                ) : null}
-                                                <DropdownMenuSeparator />
                                                 <DropdownMenuItem
                                                     onClick={() => handleDelete(campaign.id)}
-                                                    className="text-destructive focus:text-destructive"
+                                                    className="text-red-600 focus:text-red-600"
                                                 >
                                                     <Trash2 className="mr-2 h-4 w-4" />
                                                     Excluir
@@ -352,9 +458,9 @@ const Campaigns = () => {
                                 </CardHeader>
 
                                 <CardContent>
-                                    <div className="grid grid-cols-3 gap-4 text-center">
+                                    <div className="grid grid-cols-2 gap-4 text-center">
                                         <div>
-                                            <div className="text-lg font-semibold">{campaign.leads}</div>
+                                            <div className="text-lg font-semibold">{campaign.leads_count}</div>
                                             <div className="text-xs text-muted-foreground">Leads</div>
                                         </div>
                                         <div>
@@ -366,7 +472,7 @@ const Campaigns = () => {
                                     <div className="mt-4 pt-4 border-t border-border">
                                         <div className="flex items-center justify-between text-xs text-muted-foreground">
                                             <span>Atualizada em</span>
-                                            <span>{new Date(campaign.updatedAt).toLocaleDateString('pt-BR')}</span>
+                                            <span>{new Date(campaign.updated_at).toLocaleDateString('pt-BR')}</span>
                                         </div>
                                     </div>
                                 </CardContent>
@@ -379,62 +485,54 @@ const Campaigns = () => {
                             <Megaphone className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
                             <h3 className="text-lg font-medium mb-2">Nenhuma campanha encontrada</h3>
                             <p className="text-muted-foreground mb-4">
-                                {searchQuery || statusFilter !== 'all'
+                                {searchTerm || statusFilter !== 'all'
                                     ? 'Tente ajustar os filtros de busca'
                                     : 'Crie sua primeira campanha para começar a capturar leads'
                                 }
                             </p>
-                            <Button onClick={() => setIsModalOpen(true)}>
+                            <Button onClick={handleOpenCreateModal}>
                                 <Plus className="h-4 w-4 mr-2" />
                                 Nova Campanha
                             </Button>
                         </div>
                     )}
+
+                    {/* Paginação */}
+                    {pagination && (
+                        <DataPagination
+                            pagination={pagination}
+                            currentPage={currentPage}
+                            onPageChange={setCurrentPage}
+                            itemName="campanhas"
+                        />
+                    )}
                 </CardContent>
             </Card>
 
-            {/* Modal para Nova Campanha */}
-            <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
-                <DialogContent className="sm:max-w-[425px]">
-                    <DialogHeader>
-                        <DialogTitle>Nova Campanha</DialogTitle>
-                        <DialogDescription>
-                            Crie uma nova campanha de captação de leads preenchendo as informações abaixo.
-                        </DialogDescription>
-                    </DialogHeader>
-                    <div className="grid gap-4 py-4">
-                        <div className="grid gap-2">
-                            <Label htmlFor="title">Título da Campanha</Label>
-                            <Input
-                                id="title"
-                                placeholder="Digite o título da campanha"
-                                value={newCampaign.title}
-                                onChange={(e) => setNewCampaign(prev => ({ ...prev, title: e.target.value }))}
-                            />
-                        </div>
-                        <div className="grid gap-2">
-                            <Label htmlFor="url">URL da Campanha</Label>
-                            <Input
-                                id="url"
-                                placeholder="https://exemplo.com/campanha"
-                                value={newCampaign.url}
-                                onChange={(e) => setNewCampaign(prev => ({ ...prev, url: e.target.value }))}
-                            />
-                        </div>
-                    </div>
-                    <DialogFooter>
-                        <Button variant="outline" onClick={handleModalClose}>
-                            Cancelar
-                        </Button>
-                        <Button
-                            onClick={handleCreateCampaign}
-                            disabled={!newCampaign.title.trim() || !newCampaign.url.trim()}
-                        >
-                            Criar Campanha
-                        </Button>
-                    </DialogFooter>
-                </DialogContent>
-            </Dialog>
+            {/* Modal reutilizável para criação e edição */}
+            <CampaignModal
+                isOpen={isCampaignModalOpen}
+                onClose={handleCloseModal}
+                onSave={handleSaveCampaign}
+                campaign={editingCampaign}
+                isLoading={isUploading}
+            />
+
+            {/* Componente de Confirmação Global */}
+            <ConfirmComponent />
+
+            {/* Dialog de alteração de status */}
+            {selectedCampaignForStatus && (
+                <CampaignStatusDialog
+                    isOpen={statusDialogOpen}
+                    onClose={handleCloseStatusDialog}
+                    currentStatus={selectedCampaignForStatus.status}
+                    campaignTitle={selectedCampaignForStatus.title}
+                    onStatusChange={(newStatus) => handleStatusChange(selectedCampaignForStatus.id, newStatus)}
+                />
+            )}
+
+
         </div>
     );
 };

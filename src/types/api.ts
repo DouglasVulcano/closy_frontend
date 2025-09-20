@@ -15,6 +15,19 @@ export interface PaginatedResponse<T> {
   last_page: number;
   per_page: number;
   total: number;
+  first_page_url: string;
+  from: number;
+  last_page_url: string;
+  links: {
+    url: string | null;
+    label: string;
+    page: number | null;
+    active: boolean;
+  }[];
+  next_page_url: string | null;
+  path: string;
+  prev_page_url: string | null;
+  to: number;
 }
 
 // User related types
@@ -116,14 +129,25 @@ export interface PresignedUrlResponse {
   public_url: string;
 }
 
-// Campaign related types (para futuras implementações)
+// Campaign related types
 export interface Campaign {
   id: number;
-  name: string;
-  description?: string;
-  status: 'active' | 'paused' | 'completed';
+  user_id: number;
+  title: string;
+  slug: string;
+  start_date: string | null;
+  end_date: string | null;
+  status: 'draft' | 'active' | 'paused' | 'completed';
+  details: unknown | null;
   created_at: string;
   updated_at: string;
+  leads_count: number;
+  converted_leads_count: string;
+  conversion: string;
+  // Legacy properties for backward compatibility
+  name?: string;
+  leads?: number;
+  updatedAt?: string;
 }
 
 // Lead related types (para futuras implementações)

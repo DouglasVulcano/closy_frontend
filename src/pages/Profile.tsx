@@ -2,7 +2,7 @@ import { useState, useRef } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { useNavigate } from 'react-router-dom';
 import { useToast } from '@/hooks/use-toast';
-import { uploadService, userService } from '@/services';
+import { uploadService, userService, plansService } from '@/services';
 import {
   Camera,
   Edit,
@@ -64,6 +64,7 @@ const Profile = () => {
   const [isUpdating, setIsUpdating] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [isUploadingImage, setIsUploadingImage] = useState(false);
+  const [isLoadingPortal, setIsLoadingPortal] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Mapear role para plano
@@ -187,6 +188,22 @@ const Profile = () => {
       });
     } finally {
       setIsDeleting(false);
+    }
+  };
+
+  const handleManagePlan = async () => {
+    setIsLoadingPortal(true);
+    try {
+      const result = await plansService.getPortalUrl(window.location.href);
+      window.open(result.portal_url, '_blank');
+    } catch (error) {
+      toast({
+        title: "Erro ao acessar portal",
+        description: error instanceof Error ? error.message : "Ocorreu um erro inesperado.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoadingPortal(false);
     }
   };
 
@@ -482,8 +499,15 @@ const Profile = () => {
                     <h3 className="font-medium">Plano {planConfig[profile.plan].label}</h3>
                   </div>
                 </div>
-                <Button variant="outline">
-                  {profile.plan === 'free' ? 'Fazer Upgrade' : 'Gerenciar Plano'}
+                <Button
+                  variant="outline"
+                  onClick={handleManagePlan}
+                  disabled={isLoadingPortal}
+                >
+                  {isLoadingPortal
+                    ? 'Carregando...'
+                    : (profile.plan === 'free' ? 'Fazer Upgrade' : 'Gerenciar Plano')
+                  }
                 </Button>
               </div>
 
