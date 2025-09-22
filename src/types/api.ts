@@ -150,13 +150,16 @@ export interface Campaign {
   updatedAt?: string;
 }
 
-// Lead related types (para futuras implementações)
+// Lead related types
 export interface Lead {
   id: number;
+  user_id: number;
+  campaign_id: number;
   name: string;
   email: string;
-  phone?: string;
-  campaign_id: number;
+  celular?: string;
+  status: 'new' | 'contacted' | 'qualified' | 'converted' | 'lost';
+  question_responses?: string;
   created_at: string;
   updated_at: string;
 }

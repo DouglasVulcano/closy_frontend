@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import {
   Search,
   Filter,
@@ -6,16 +6,12 @@ import {
   MoreHorizontal,
   Mail,
   Phone,
-  Calendar,
   Tag,
   Eye,
   Edit,
   Trash2,
   Users,
   TrendingUp,
-  Clock,
-  MapPin,
-  X
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -44,100 +40,13 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Checkbox } from '@/components/ui/checkbox';
-
-interface Lead {
-  id: string;
-  name: string;
-  email: string;
-  phone?: string;
-  campaign: string;
-  campaignId: string;
-  source: string;
-  status: 'new' | 'contacted' | 'qualified' | 'converted' | 'lost';
-  tags: string[];
-  createdAt: string;
-  lastContact?: string;
-  location?: string;
-  avatar?: string;
-  notes?: string;
-}
-
-const leads: Lead[] = [
-  {
-    id: '1',
-    name: 'Maria Silva',
-    email: 'maria.silva@exemplo.com',
-    phone: '+55 11 99999-9999',
-    campaign: 'Black Friday 2024',
-    campaignId: '1',
-    source: 'Instagram',
-    status: 'new',
-    tags: ['vip', 'interessado'],
-    createdAt: '2024-01-15T10:30:00Z',
-    location: 'São Paulo, SP',
-    avatar: '/placeholder.svg'
-  },
-  {
-    id: '2',
-    name: 'João Santos',
-    email: 'joao.santos@exemplo.com',
-    phone: '+55 21 88888-8888',
-    campaign: 'Webinar Marketing Digital',
-    campaignId: '2',
-    source: 'Facebook',
-    status: 'contacted',
-    tags: ['empresário'],
-    createdAt: '2024-01-15T09:15:00Z',
-    lastContact: '2024-01-15T14:20:00Z',
-    location: 'Rio de Janeiro, RJ',
-    avatar: '/placeholder.svg'
-  },
-  {
-    id: '3',
-    name: 'Ana Costa',
-    email: 'ana.costa@exemplo.com',
-    campaign: 'E-book Gratuito',
-    campaignId: '3',
-    source: 'Google',
-    status: 'qualified',
-    tags: ['marketing', 'interessado'],
-    createdAt: '2024-01-15T08:45:00Z',
-    lastContact: '2024-01-15T16:30:00Z',
-    location: 'Belo Horizonte, MG',
-    avatar: '/placeholder.svg'
-  },
-  {
-    id: '4',
-    name: 'Pedro Oliveira',
-    email: 'pedro.oliveira@exemplo.com',
-    phone: '+55 85 77777-7777',
-    campaign: 'Newsletter Semanal',
-    campaignId: '5',
-    source: 'LinkedIn',
-    status: 'converted',
-    tags: ['cliente', 'premium'],
-    createdAt: '2024-01-14T16:20:00Z',
-    lastContact: '2024-01-15T10:00:00Z',
-    location: 'Fortaleza, CE',
-    avatar: '/placeholder.svg'
-  },
-  {
-    id: '5',
-    name: 'Carla Mendes',
-    email: 'carla.mendes@exemplo.com',
-    campaign: 'Black Friday 2024',
-    campaignId: '1',
-    source: 'TikTok',
-    status: 'lost',
-    tags: ['não interessado'],
-    createdAt: '2024-01-14T11:10:00Z',
-    lastContact: '2024-01-14T15:45:00Z',
-    location: 'Porto Alegre, RS',
-    avatar: '/placeholder.svg'
-  },
-];
+import { leadsService, type LeadFilters, type LeadStatistics } from '@/services/leads.service';
+import { campaignsService } from '@/services/campaigns.service';
+import { detectSearchType } from '@/lib/utils';
+import type { Lead, Campaign, PaginatedResponse } from '@/types/api';
+import { DataPagination } from '@/components/ui/data-pagination';
+import { useDebounce } from '@/hooks/useDebounce';
 
 const statusConfig = {
   new: { label: 'Novo', variant: 'default' as const, color: 'bg-blue-500' },
@@ -152,35 +61,95 @@ const Leads = () => {
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [campaignFilter, setCampaignFilter] = useState<string>('all');
   const [selectedLeads, setSelectedLeads] = useState<string[]>([]);
-  const [sortBy, setSortBy] = useState<string>('created');
+  const [currentPage, setCurrentPage] = useState(1);
 
-  const filteredLeads = leads.filter(lead => {
-    const matchesSearch = lead.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      lead.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      lead.campaign.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesStatus = statusFilter === 'all' || lead.status === statusFilter;
-    const matchesCampaign = campaignFilter === 'all' || lead.campaignId === campaignFilter;
-    return matchesSearch && matchesStatus && matchesCampaign;
-  });
+  // Debounce da busca para evitar muitas requisições
+  const debouncedSearchQuery = useDebounce(searchQuery, 1000);
 
-  const sortedLeads = [...filteredLeads].sort((a, b) => {
-    switch (sortBy) {
-      case 'name':
-        return a.name.localeCompare(b.name);
-      case 'email':
-        return a.email.localeCompare(b.email);
-      case 'campaign':
-        return a.campaign.localeCompare(b.campaign);
-      case 'status':
-        return a.status.localeCompare(b.status);
-      default: // created
-        return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+  // Estados para dados da API
+  const [leads, setLeads] = useState<Lead[]>([]);
+  const [campaigns, setCampaigns] = useState<Campaign[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [pagination, setPagination] = useState<PaginatedResponse<Lead> | null>(null);
+  const [statistics, setStatistics] = useState<LeadStatistics | null>(null);
+
+  // Função para buscar leads
+  const fetchLeads = useCallback(async () => {
+    try {
+      setLoading(true);
+
+      const filters: LeadFilters = {
+        status: statusFilter !== 'all' ? statusFilter as 'new' | 'contacted' | 'qualified' | 'converted' | 'lost' : undefined,
+        campaign_id: campaignFilter !== 'all' ? parseInt(campaignFilter) : undefined,
+        page: currentPage,
+        per_page: 10
+      };
+
+      // Adicionar filtro de busca baseado no tipo detectado
+      if (debouncedSearchQuery.trim()) {
+        const { isEmail, value } = detectSearchType(debouncedSearchQuery);
+        if (isEmail) {
+          filters.email = value;
+        } else {
+          filters.name = value;
+        }
+      }
+
+      const response = await leadsService.getLeads(filters);
+      setLeads(response.data);
+      setPagination(response);
+    } catch (error) {
+      console.error('Erro ao buscar leads:', error);
+      setLeads([]);
+      setPagination(null);
+    } finally {
+      setLoading(false);
     }
-  });
+  }, [debouncedSearchQuery, statusFilter, campaignFilter, currentPage]);
+
+  // Função para buscar campanhas
+  const fetchCampaigns = useCallback(async () => {
+    try {
+      const response = await campaignsService.getCampaigns();
+      setCampaigns(response.data);
+    } catch (error) {
+      console.error('Erro ao buscar campanhas:', error);
+    }
+  }, []);
+
+  // Função para buscar estatísticas
+  const fetchStatistics = useCallback(async () => {
+    try {
+      const stats = await leadsService.getLeadStatistics();
+      setStatistics(stats);
+    } catch (error) {
+      console.error('Erro ao buscar estatísticas:', error);
+    }
+  }, []);
+
+  // Efeito para carregar dados iniciais
+  useEffect(() => {
+    fetchCampaigns();
+    fetchStatistics();
+  }, [fetchCampaigns, fetchStatistics]);
+
+  // Efeito para aplicar filtros e paginação
+  useEffect(() => {
+    fetchLeads();
+  }, [fetchLeads]);
+
+  // Resetar página quando filtros mudarem
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [debouncedSearchQuery, statusFilter, campaignFilter]);
+
+  const filteredLeads = leads; // Agora os filtros são aplicados na API
+
+  const sortedLeads = [...filteredLeads]; // Ordenação será implementada na API futuramente
 
   const handleSelectAll = (checked: boolean) => {
     if (checked) {
-      setSelectedLeads(sortedLeads.map(lead => lead.id));
+      setSelectedLeads(sortedLeads.map(lead => lead.id.toString()));
     } else {
       setSelectedLeads([]);
     }
@@ -199,14 +168,24 @@ const Leads = () => {
     console.log('Exportando leads:', selectedLeads.length > 0 ? selectedLeads : 'todos');
   };
 
-  const handleStatusChange = (leadId: string, newStatus: string) => {
-    // Aqui você implementaria a lógica para alterar o status do lead
-    console.log(`Alterando status do lead ${leadId} para ${newStatus}`);
+  const handleStatusChange = async (leadId: number, newStatus: string) => {
+    try {
+      await leadsService.updateLeadStatus(leadId, newStatus as 'new' | 'contacted' | 'qualified' | 'converted' | 'lost');
+      // Recarregar leads após atualização
+      fetchLeads();
+    } catch (error) {
+      console.error(`Erro ao alterar status do lead ${leadId}:`, error);
+    }
   };
 
-  const handleDelete = (leadId: string) => {
-    // Aqui você implementaria a lógica para excluir o lead
-    console.log(`Excluindo lead ${leadId}`);
+  const handleDelete = async (leadId: number) => {
+    try {
+      await leadsService.deleteLead(leadId);
+      // Recarregar leads após exclusão
+      fetchLeads();
+    } catch (error) {
+      console.error(`Erro ao excluir lead ${leadId}:`, error);
+    }
   };
 
   const getStatusStats = () => {
@@ -218,6 +197,12 @@ const Leads = () => {
   };
 
   const statusStats = getStatusStats();
+
+  // Função para obter nome da campanha
+  const getCampaignName = (campaignId: number) => {
+    const campaign = campaigns.find(c => c.id === campaignId);
+    return campaign?.title || `Campanha ${campaignId}`;
+  };
 
   return (
     <div className="space-y-6">
@@ -238,14 +223,14 @@ const Leads = () => {
       </div>
 
       {/* Stats Cards */}
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-5">
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-3">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Total de Leads</CardTitle>
             <Users className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{leads.length}</div>
+            <div className="text-2xl font-bold">{statistics?.total || 0}</div>
             <p className="text-xs text-muted-foreground">
               Todos os contatos
             </p>
@@ -258,9 +243,22 @@ const Leads = () => {
             <div className="w-3 h-3 rounded-full bg-blue-500"></div>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{statusStats.new || 0}</div>
+            <div className="text-2xl font-bold">{statistics?.new || 0}</div>
             <p className="text-xs text-muted-foreground">
               Aguardando contato
+            </p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Contatados</CardTitle>
+            <div className="w-3 h-3 rounded-full bg-yellow-500"></div>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{statistics?.contacted || 0}</div>
+            <p className="text-xs text-muted-foreground">
+              Em andamento
             </p>
           </CardContent>
         </Card>
@@ -271,7 +269,7 @@ const Leads = () => {
             <div className="w-3 h-3 rounded-full bg-purple-500"></div>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{statusStats.qualified || 0}</div>
+            <div className="text-2xl font-bold">{statistics?.qualified || 0}</div>
             <p className="text-xs text-muted-foreground">
               Prontos para venda
             </p>
@@ -284,24 +282,22 @@ const Leads = () => {
             <div className="w-3 h-3 rounded-full bg-green-500"></div>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{statusStats.converted || 0}</div>
+            <div className="text-2xl font-bold">{statistics?.converted || 0}</div>
             <p className="text-xs text-muted-foreground">
-              Viraram clientes
+              Taxa de Conversão: {statistics?.total_leads_conversion || 0}%
             </p>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Taxa de Conversão</CardTitle>
-            <TrendingUp className="h-4 w-4 text-muted-foreground" />
+            <CardTitle className="text-sm font-medium">Perdidos</CardTitle>
+            <div className="w-3 h-3 rounded-full bg-red-500"></div>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">
-              {leads.length > 0 ? ((statusStats.converted || 0) / leads.length * 100).toFixed(1) : 0}%
-            </div>
+            <div className="text-2xl font-bold">{statistics?.lost || 0}</div>
             <p className="text-xs text-muted-foreground">
-              Leads → Clientes
+              Não convertidos
             </p>
           </CardContent>
         </Card>
@@ -315,7 +311,7 @@ const Leads = () => {
             <div className="relative">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input
-                placeholder="Buscar por nome, email ou campanha..."
+                placeholder="Buscar por nome ou email"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 className="pl-10"
@@ -345,23 +341,11 @@ const Leads = () => {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">Todas</SelectItem>
-                  <SelectItem value="1">Black Friday 2024</SelectItem>
-                  <SelectItem value="2">Webinar Marketing</SelectItem>
-                  <SelectItem value="3">E-book Gratuito</SelectItem>
-                  <SelectItem value="5">Newsletter</SelectItem>
-                </SelectContent>
-              </Select>
-
-              <Select value={sortBy} onValueChange={setSortBy}>
-                <SelectTrigger className="w-[140px]">
-                  <SelectValue placeholder="Ordenar" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="created">Mais recentes</SelectItem>
-                  <SelectItem value="name">Nome</SelectItem>
-                  <SelectItem value="email">Email</SelectItem>
-                  <SelectItem value="campaign">Campanha</SelectItem>
-                  <SelectItem value="status">Status</SelectItem>
+                  {campaigns.map(campaign => (
+                    <SelectItem key={campaign.id} value={campaign.id.toString()}>
+                      {campaign.title}
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>
@@ -383,33 +367,20 @@ const Leads = () => {
                     <SelectItem value="lost">Perdidos</SelectItem>
                   </SelectContent>
                 </Select>
-
-                <Select value={sortBy} onValueChange={setSortBy}>
+                <Select value={campaignFilter} onValueChange={setCampaignFilter}>
                   <SelectTrigger>
-                    <SelectValue placeholder="Ordenar" />
+                    <SelectValue placeholder="Filtrar por campanha" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="created">Mais recentes</SelectItem>
-                    <SelectItem value="name">Nome</SelectItem>
-                    <SelectItem value="email">Email</SelectItem>
-                    <SelectItem value="campaign">Campanha</SelectItem>
-                    <SelectItem value="status">Status</SelectItem>
+                    <SelectItem value="all">Todas as campanhas</SelectItem>
+                    {campaigns.map(campaign => (
+                      <SelectItem key={campaign.id} value={campaign.id.toString()}>
+                        {campaign.title}
+                      </SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
               </div>
-
-              <Select value={campaignFilter} onValueChange={setCampaignFilter}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Filtrar por campanha" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">Todas as campanhas</SelectItem>
-                  <SelectItem value="1">Black Friday 2024</SelectItem>
-                  <SelectItem value="2">Webinar Marketing</SelectItem>
-                  <SelectItem value="3">E-book Gratuito</SelectItem>
-                  <SelectItem value="5">Newsletter</SelectItem>
-                </SelectContent>
-              </Select>
             </div>
           </div>
 
@@ -426,10 +397,6 @@ const Leads = () => {
                 <Button size="sm" variant="outline">
                   <Mail className="h-4 w-4 mr-2" />
                   Enviar Email
-                </Button>
-                <Button size="sm" variant="outline">
-                  <Tag className="h-4 w-4 mr-2" />
-                  Adicionar Tag
                 </Button>
                 <Button size="sm" variant="outline" onClick={handleExport}>
                   <Download className="h-4 w-4 mr-2" />
@@ -474,7 +441,6 @@ const Leads = () => {
                     <TableHead>Lead</TableHead>
                     <TableHead>Campanha</TableHead>
                     <TableHead>Status</TableHead>
-                    <TableHead>Data</TableHead>
                     <TableHead className="w-12"></TableHead>
                   </TableRow>
                 </TableHeader>
@@ -483,8 +449,8 @@ const Leads = () => {
                     <TableRow key={lead.id}>
                       <TableCell>
                         <Checkbox
-                          checked={selectedLeads.includes(lead.id)}
-                          onCheckedChange={(checked) => handleSelectLead(lead.id, checked as boolean)}
+                          checked={selectedLeads.includes(lead.id.toString())}
+                          onCheckedChange={(checked) => handleSelectLead(lead.id.toString(), checked as boolean)}
                         />
                       </TableCell>
                       <TableCell>
@@ -492,39 +458,22 @@ const Leads = () => {
                           <div className="min-w-0">
                             <div className="font-medium truncate">{lead.name}</div>
                             <div className="text-sm text-muted-foreground truncate">{lead.email}</div>
-                            {lead.phone && (
+                            {lead.celular && (
                               <div className="text-xs text-muted-foreground flex items-center gap-1">
                                 <Phone className="h-3 w-3" />
-                                {lead.phone}
+                                {lead.celular}
                               </div>
                             )}
                           </div>
                         </div>
                       </TableCell>
                       <TableCell>
-                        <div className="font-medium">{lead.campaign}</div>
+                        <div className="font-medium">{getCampaignName(lead.campaign_id)}</div>
                       </TableCell>
                       <TableCell>
                         <Badge variant={statusConfig[lead.status].variant}>
                           {statusConfig[lead.status].label}
                         </Badge>
-                      </TableCell>
-                      <TableCell>
-                        <div className="text-sm">
-                          {new Date(lead.createdAt).toLocaleDateString('pt-BR')}
-                        </div>
-                        <div className="text-xs text-muted-foreground">
-                          {new Date(lead.createdAt).toLocaleTimeString('pt-BR', {
-                            hour: '2-digit',
-                            minute: '2-digit'
-                          })}
-                        </div>
-                        {lead.lastContact && (
-                          <div className="text-xs text-muted-foreground flex items-center gap-1 mt-1">
-                            <Clock className="h-3 w-3" />
-                            Último contato: {new Date(lead.lastContact).toLocaleDateString('pt-BR')}
-                          </div>
-                        )}
                       </TableCell>
                       <TableCell>
                         <DropdownMenu>
@@ -583,15 +532,9 @@ const Leads = () => {
                   <div className="flex items-start justify-between mb-3">
                     <div className="flex items-center gap-3 flex-1 min-w-0">
                       <Checkbox
-                        checked={selectedLeads.includes(lead.id)}
-                        onCheckedChange={(checked) => handleSelectLead(lead.id, checked as boolean)}
+                        checked={selectedLeads.includes(lead.id.toString())}
+                        onCheckedChange={(checked) => handleSelectLead(lead.id.toString(), checked as boolean)}
                       />
-                      <Avatar className="h-10 w-10 flex-shrink-0">
-                        <AvatarImage src={lead.avatar} alt={lead.name} />
-                        <AvatarFallback>
-                          {lead.name.split(' ').map(n => n[0]).join('').toUpperCase()}
-                        </AvatarFallback>
-                      </Avatar>
                       <div className="min-w-0 flex-1">
                         <h3 className="font-medium truncate">{lead.name}</h3>
                         <p className="text-sm text-muted-foreground truncate">{lead.email}</p>
@@ -643,7 +586,7 @@ const Leads = () => {
                     <div className="flex items-center justify-between">
                       <span className="text-sm font-medium">Campanha:</span>
                       <span className="text-sm text-muted-foreground truncate max-w-[60%]">
-                        {lead.campaign}
+                        {getCampaignName(lead.campaign_id)}
                       </span>
                     </div>
 
@@ -654,56 +597,12 @@ const Leads = () => {
                       </Badge>
                     </div>
 
-                    {lead.phone && (
+                    {lead.celular && (
                       <div className="flex items-center justify-between">
                         <span className="text-sm font-medium">Telefone:</span>
                         <div className="flex items-center gap-1 text-sm text-muted-foreground">
                           <Phone className="h-3 w-3" />
-                          {lead.phone}
-                        </div>
-                      </div>
-                    )}
-
-                    {lead.location && (
-                      <div className="flex items-center justify-between">
-                        <span className="text-sm font-medium">Localização:</span>
-                        <div className="flex items-center gap-1 text-sm text-muted-foreground">
-                          <MapPin className="h-3 w-3" />
-                          {lead.location}
-                        </div>
-                      </div>
-                    )}
-
-                    <div className="flex items-center justify-between">
-                      <span className="text-sm font-medium">Criado em:</span>
-                      <div className="text-sm text-muted-foreground">
-                        {new Date(lead.createdAt).toLocaleDateString('pt-BR')} às{' '}
-                        {new Date(lead.createdAt).toLocaleTimeString('pt-BR', {
-                          hour: '2-digit',
-                          minute: '2-digit'
-                        })}
-                      </div>
-                    </div>
-
-                    {lead.lastContact && (
-                      <div className="flex items-center justify-between">
-                        <span className="text-sm font-medium">Último contato:</span>
-                        <div className="flex items-center gap-1 text-sm text-muted-foreground">
-                          <Clock className="h-3 w-3" />
-                          {new Date(lead.lastContact).toLocaleDateString('pt-BR')}
-                        </div>
-                      </div>
-                    )}
-
-                    {lead.tags && lead.tags.length > 0 && (
-                      <div className="flex items-start justify-between">
-                        <span className="text-sm font-medium">Tags:</span>
-                        <div className="flex flex-wrap gap-1 max-w-[60%]">
-                          {lead.tags.map((tag, index) => (
-                            <Badge key={index} variant="outline" className="text-xs">
-                              {tag}
-                            </Badge>
-                          ))}
+                          {lead.celular}
                         </div>
                       </div>
                     )}
@@ -714,7 +613,7 @@ const Leads = () => {
                       <Mail className="h-4 w-4 mr-2" />
                       Email
                     </Button>
-                    {lead.phone && (
+                    {lead.celular && (
                       <Button size="sm" variant="outline" className="flex-1">
                         <Phone className="h-4 w-4 mr-2" />
                         Ligar
@@ -737,6 +636,18 @@ const Leads = () => {
                   : 'Seus leads aparecerão aqui quando suas campanhas começarem a capturar contatos'
                 }
               </p>
+            </div>
+          )}
+
+          {/* Paginação */}
+          {pagination && pagination.last_page > 1 && (
+            <div className="mt-6">
+              <DataPagination
+                pagination={pagination}
+                currentPage={currentPage}
+                onPageChange={setCurrentPage}
+                itemName="leads"
+              />
             </div>
           )}
         </CardContent>

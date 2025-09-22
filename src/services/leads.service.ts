@@ -28,13 +28,10 @@ export interface UpdateLeadData {
 export interface LeadFilters {
   campaign_id?: number;
   status?: 'new' | 'contacted' | 'qualified' | 'converted' | 'lost';
-  search?: string;
-  date_from?: string;
-  date_to?: string;
+  email?: string;
+  name?: string;
   page?: number;
   per_page?: number;
-  sort_by?: 'name' | 'email' | 'created_at' | 'updated_at';
-  sort_order?: 'asc' | 'desc';
 }
 
 export interface LeadStats {
@@ -51,13 +48,23 @@ export interface LeadStats {
   }[];
 }
 
+export interface LeadStatistics {
+  total: number;
+  converted: number;
+  lost: number;
+  qualified: number;
+  contacted: number;
+  new: number;
+  total_leads_conversion: number;
+}
+
 export class LeadsService {
   /**
    * Obter todos os leads do usuário
    */
   async getLeads(filters: LeadFilters = {}): Promise<PaginatedResponse<Lead>> {
     const params = new URLSearchParams();
-    
+
     Object.entries(filters).forEach(([key, value]) => {
       if (value !== undefined && value !== null) {
         params.append(key, value.toString());
@@ -66,7 +73,7 @@ export class LeadsService {
 
     const queryString = params.toString();
     const endpoint = queryString ? `/leads?${queryString}` : '/leads';
-    
+
     return httpClient.get<PaginatedResponse<Lead>>(endpoint);
   }
 
@@ -113,7 +120,7 @@ export class LeadsService {
    * Atualizar status do lead
    */
   async updateLeadStatus(
-    id: number, 
+    id: number,
     status: 'new' | 'contacted' | 'qualified' | 'converted' | 'lost'
   ): Promise<Lead> {
     return httpClient.patch<Lead>(`/leads/${id}/status`, { status });
@@ -149,14 +156,14 @@ export class LeadsService {
    * Obter estatísticas dos leads
    */
   async getLeadsStats(
-    filters: { 
-      campaign_id?: number; 
-      date_from?: string; 
-      date_to?: string; 
+    filters: {
+      campaign_id?: number;
+      date_from?: string;
+      date_to?: string;
     } = {}
   ): Promise<LeadStats> {
     const params = new URLSearchParams();
-    
+
     Object.entries(filters).forEach(([key, value]) => {
       if (value !== undefined && value !== null) {
         params.append(key, value.toString());
@@ -165,8 +172,15 @@ export class LeadsService {
 
     const queryString = params.toString();
     const endpoint = queryString ? `/leads/stats?${queryString}` : '/leads/stats';
-    
+
     return httpClient.get<LeadStats>(endpoint);
+  }
+
+  /**
+   * Obter estatísticas resumidas dos leads
+   */
+  async getLeadStatistics(): Promise<LeadStatistics> {
+    return httpClient.get<LeadStatistics>('/leads/statistics');
   }
 
   /**
@@ -177,7 +191,7 @@ export class LeadsService {
     format: 'csv' | 'xlsx' = 'csv'
   ): Promise<{ download_url: string }> {
     const params = new URLSearchParams();
-    
+
     Object.entries({ ...filters, format }).forEach(([key, value]) => {
       if (value !== undefined && value !== null) {
         params.append(key, value.toString());
@@ -215,10 +229,8 @@ export class LeadsService {
    * Obter leads recentes
    */
   async getRecentLeads(limit: number = 10): Promise<Lead[]> {
-    const response = await this.getLeads({ 
-      per_page: limit, 
-      sort_by: 'created_at', 
-      sort_order: 'desc' 
+    const response = await this.getLeads({
+      per_page: limit
     });
     return response.data;
   }
@@ -227,8 +239,8 @@ export class LeadsService {
    * Marcar lead como convertido
    */
   async convertLead(id: number, conversionValue?: number): Promise<Lead> {
-    return httpClient.patch<Lead>(`/leads/${id}/convert`, { 
-      conversion_value: conversionValue 
+    return httpClient.patch<Lead>(`/leads/${id}/convert`, {
+      conversion_value: conversionValue
     });
   }
 

@@ -18,7 +18,6 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import {
     DropdownMenu,
     DropdownMenuContent,
@@ -34,14 +33,7 @@ import {
     SelectTrigger,
     SelectValue,
 } from '@/components/ui/select';
-import {
-    Dialog,
-    DialogContent,
-    DialogDescription,
-    DialogFooter,
-    DialogHeader,
-    DialogTitle,
-} from '@/components/ui/dialog';
+
 import { Link } from 'react-router-dom';
 import { campaignsService, CampaignFilters, CampaignStatistics } from '../services/campaigns.service';
 import { Campaign, PaginatedResponse } from '../types/api';
@@ -49,6 +41,7 @@ import { DataPagination } from '../components/ui/data-pagination';
 import { CampaignsPageSkeleton } from '../components/skeletons';
 import { useToast } from '../hooks/use-toast';
 import { useConfirm } from '../hooks/useConfirm';
+import { useDebounce } from '../hooks/useDebounce';
 import { CampaignStatusDialog } from '../components/campaigns/CampaignStatusDialog';
 import { CampaignModal, CampaignFormData } from '../components/campaigns/CampaignModal';
 
@@ -67,6 +60,9 @@ const Campaigns = () => {
     const [isCampaignModalOpen, setIsCampaignModalOpen] = useState(false);
     const [editingCampaign, setEditingCampaign] = useState<Campaign | null>(null);
     const [isUploading, setIsUploading] = useState(false);
+
+    // Debounce da busca para evitar muitas requisições
+    const debouncedSearchTerm = useDebounce(searchTerm, 1000);
     const [campaigns, setCampaigns] = useState<Campaign[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [pagination, setPagination] = useState<PaginatedResponse<Campaign> | null>(null);
@@ -91,8 +87,8 @@ const Campaigns = () => {
                 filters.status = statusFilter;
             }
 
-            if (searchTerm.trim()) {
-                filters.title = searchTerm.trim();
+            if (debouncedSearchTerm.trim()) {
+                filters.title = debouncedSearchTerm.trim();
             }
 
             const response = await campaignsService.getCampaigns(filters);
@@ -103,7 +99,7 @@ const Campaigns = () => {
         } finally {
             setIsLoading(false);
         }
-    }, [currentPage, statusFilter, searchTerm]);
+    }, [currentPage, statusFilter, debouncedSearchTerm]);
 
     // Função para carregar estatísticas
     const loadStatistics = useCallback(async () => {
@@ -121,7 +117,7 @@ const Campaigns = () => {
     // Carregar campanhas quando o componente montar ou filtros mudarem
     useEffect(() => {
         loadCampaigns();
-    }, [currentPage, statusFilter, searchTerm, loadCampaigns]);
+    }, [currentPage, statusFilter, debouncedSearchTerm, loadCampaigns]);
 
     // Carregar estatísticas quando o componente montar
     useEffect(() => {
