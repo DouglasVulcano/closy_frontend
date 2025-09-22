@@ -7,7 +7,7 @@ export const CampaignsPageSkeleton: React.FC = () => {
   return (
     <div className="space-y-6">
       {/* Header da página */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
           <Skeleton className="h-8 w-48 mb-2" />
           <Skeleton className="h-4 w-64" />
@@ -16,7 +16,7 @@ export const CampaignsPageSkeleton: React.FC = () => {
       </div>
 
       {/* Cards de estatísticas */}
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+      <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 md:grid-cols-4">
         {Array.from({ length: 4 }).map((_, i) => (
           <Card key={i}>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
@@ -34,34 +34,34 @@ export const CampaignsPageSkeleton: React.FC = () => {
       {/* Filtros e busca */}
       <Card>
         <CardHeader>
-          <div className="flex items-center justify-between">
-            <Skeleton className="h-6 w-32" />
-            <div className="flex gap-4">
-              <Skeleton className="h-10 w-64" />
-              <Skeleton className="h-10 w-32" />
+          <div className="flex flex-col sm:flex-row gap-4">
+            <div className="flex-1">
+              <div className="relative">
+                <Skeleton className="h-10 w-full" />
+              </div>
+            </div>
+            <div className="flex gap-2">
+              <Skeleton className="h-10 w-[140px]" />
             </div>
           </div>
         </CardHeader>
 
         <CardContent>
           {/* Grid de campanhas skeleton */}
-          <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
             {Array.from({ length: 6 }).map((_, i) => (
               <CampaignCardSkeleton key={i} />
             ))}
           </div>
 
           {/* Paginação skeleton */}
-          <div className="flex items-center justify-between pt-6 border-t border-border mt-6">
-            <Skeleton className="h-4 w-48" />
-            <div className="flex items-center gap-2">
-              <Skeleton className="h-9 w-20" />
-              <div className="flex gap-1">
-                {Array.from({ length: 5 }).map((_, i) => (
-                  <Skeleton key={i} className="h-8 w-8" />
-                ))}
-              </div>
-              <Skeleton className="h-9 w-20" />
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 pt-6 border-t border-border mt-6">
+            <Skeleton className="h-4 w-32" />
+            <div className="flex gap-2 justify-center sm:justify-end">
+              <Skeleton className="h-10 w-10" />
+              <Skeleton className="h-10 w-10" />
+              <Skeleton className="h-10 w-10" />
+              <Skeleton className="h-10 w-10" />
             </div>
           </div>
         </CardContent>

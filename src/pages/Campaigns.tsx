@@ -421,7 +421,7 @@ const Campaigns = () => {
 
                         <div className="flex gap-2">
                             <Select value={statusFilter} onValueChange={(value) => setStatusFilter(value as CampaignStatus | 'all')}>
-                                <SelectTrigger className="w-[140px]">
+                                <SelectTrigger className="w-full sm:w-[140px]">
                                     <Filter className="h-4 w-4 mr-2" />
                                     <SelectValue placeholder="Status" />
                                 </SelectTrigger>

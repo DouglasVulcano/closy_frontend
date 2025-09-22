@@ -48,10 +48,10 @@ export const CampaignCardSkeleton: React.FC = () => {
         </div>
 
         {/* Botões de ação */}
-        <div className="flex gap-2 pt-2">
-          <Skeleton className="h-9 w-20" />
-          <Skeleton className="h-9 w-16" />
-          <Skeleton className="h-9 w-24" />
+        <div className="flex flex-wrap gap-2 pt-2">
+          <Skeleton className="h-9 flex-1 min-w-[60px]" />
+          <Skeleton className="h-9 flex-1 min-w-[50px]" />
+          <Skeleton className="h-9 flex-1 min-w-[70px]" />
         </div>
       </CardContent>
     </Card>

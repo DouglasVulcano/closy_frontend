@@ -47,6 +47,7 @@ import { detectSearchType } from '@/lib/utils';
 import type { Lead, Campaign, PaginatedResponse } from '@/types/api';
 import { DataPagination } from '@/components/ui/data-pagination';
 import { useDebounce } from '@/hooks/useDebounce';
+import { LeadsPageSkeleton } from '@/components/skeletons';
 
 const statusConfig = {
   new: { label: 'Novo', variant: 'default' as const, color: 'bg-blue-500' },
@@ -203,6 +204,10 @@ const Leads = () => {
     const campaign = campaigns.find(c => c.id === campaignId);
     return campaign?.title || `Campanha ${campaignId}`;
   };
+
+  if (loading) {
+    return <LeadsPageSkeleton />;
+  }
 
   return (
     <div className="space-y-6">
