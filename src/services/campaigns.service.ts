@@ -43,6 +43,14 @@ export interface CampaignStats {
   }[];
 }
 
+export interface CampaignStatistics {
+  total_campaigns: number;
+  total_active_campaigns: number;
+  total_leads: number;
+  total_leads_this_month: number;
+  total_leads_conversion: string;
+}
+
 export class CampaignsService {
   /**
    * Obter todas as campanhas do usuário
@@ -156,6 +164,13 @@ export class CampaignsService {
     average_conversion_rate: number;
   }> {
     return httpClient.get('/campaigns/summary');
+  }
+
+  /**
+   * Obter estatísticas gerais das campanhas
+   */
+  async getStatistics(): Promise<CampaignStatistics> {
+    return httpClient.get<CampaignStatistics>('/campaign/statistics');
   }
 }
 

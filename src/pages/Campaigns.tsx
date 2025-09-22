@@ -43,7 +43,7 @@ import {
     DialogTitle,
 } from '@/components/ui/dialog';
 import { Link } from 'react-router-dom';
-import { campaignsService, CampaignFilters } from '../services/campaigns.service';
+import { campaignsService, CampaignFilters, CampaignStatistics } from '../services/campaigns.service';
 import { Campaign, PaginatedResponse } from '../types/api';
 import { DataPagination } from '../components/ui/data-pagination';
 import { CampaignsPageSkeleton } from '../components/skeletons';
@@ -73,6 +73,8 @@ const Campaigns = () => {
     const [currentPage, setCurrentPage] = useState(1);
     const [statusDialogOpen, setStatusDialogOpen] = useState(false);
     const [selectedCampaignForStatus, setSelectedCampaignForStatus] = useState<Campaign | null>(null);
+    const [statistics, setStatistics] = useState<CampaignStatistics | null>(null);
+    const [isLoadingStats, setIsLoadingStats] = useState(true);
     const { toast } = useToast();
     const { confirm, ConfirmComponent } = useConfirm();
 
@@ -103,10 +105,28 @@ const Campaigns = () => {
         }
     }, [currentPage, statusFilter, searchTerm]);
 
+    // Função para carregar estatísticas
+    const loadStatistics = useCallback(async () => {
+        try {
+            setIsLoadingStats(true);
+            const response = await campaignsService.getStatistics();
+            setStatistics(response);
+        } catch (error) {
+            console.error('Erro ao carregar estatísticas:', error);
+        } finally {
+            setIsLoadingStats(false);
+        }
+    }, []);
+
     // Carregar campanhas quando o componente montar ou filtros mudarem
     useEffect(() => {
         loadCampaigns();
     }, [currentPage, statusFilter, searchTerm, loadCampaigns]);
+
+    // Carregar estatísticas quando o componente montar
+    useEffect(() => {
+        loadStatistics();
+    }, [loadStatistics]);
 
     // Função para salvar campanha (criação ou edição)
     const handleSaveCampaign = async (data: CampaignFormData) => {
@@ -132,11 +152,12 @@ const Campaigns = () => {
             setIsCampaignModalOpen(false);
             setEditingCampaign(null);
             loadCampaigns(); // Recarregar a lista
+            loadStatistics(); // Recarregar estatísticas
         } catch (error) {
             console.error('Erro ao salvar campanha:', error);
             toast({
                 title: "Erro",
-                description: editingCampaign 
+                description: editingCampaign
                     ? "Não foi possível atualizar a campanha."
                     : "Não foi possível criar a campanha.",
                 variant: "destructive",
@@ -238,6 +259,7 @@ const Campaigns = () => {
 
             // Recarregar a lista completa para garantir sincronização
             await loadCampaigns();
+            loadStatistics(); // Recarregar estatísticas
 
             toast({
                 title: "Status atualizado",
@@ -282,6 +304,7 @@ const Campaigns = () => {
 
             // Recarregar a lista para atualizar a paginação
             loadCampaigns();
+            loadStatistics(); // Recarregar estatísticas
 
         } catch (error) {
             console.error('Erro ao excluir campanha:', error);
@@ -325,17 +348,31 @@ const Campaigns = () => {
             </div>
 
             {/* Stats Cards */}
-            <div className="grid gap-4 md:grid-cols-3">
+            <div className="grid gap-4 md:grid-cols-4">
                 <Card>
                     <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                         <CardTitle className="text-sm font-medium">Total de Campanhas</CardTitle>
                         <BarChart3 className="h-4 w-4 text-muted-foreground" />
                     </CardHeader>
                     <CardContent>
-                        <div className="text-2xl font-bold">{campaigns.length}</div>
+                        <div className="text-2xl font-bold">
+                            {isLoadingStats ? '...' : statistics?.total_campaigns || 0}
+                        </div>
                         <p className="text-xs text-muted-foreground">
-                            {campaigns.filter(c => c.status === 'active').length} ativas
+                            {isLoadingStats ? '...' : statistics?.total_active_campaigns || 0} ativas
                         </p>
+                    </CardContent>
+                </Card>
+
+                <Card>
+                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                        <CardTitle className="text-sm font-medium">Total de Leads no mês</CardTitle>
+                        <Users className="h-4 w-4 text-muted-foreground" />
+                    </CardHeader>
+                    <CardContent>
+                        <div className="text-2xl font-bold">
+                            {isLoadingStats ? '...' : (statistics?.total_leads_this_month || 0).toLocaleString()}
+                        </div>
                     </CardContent>
                 </Card>
 
@@ -346,7 +383,7 @@ const Campaigns = () => {
                     </CardHeader>
                     <CardContent>
                         <div className="text-2xl font-bold">
-                            {campaigns.reduce((sum, c) => sum + c.leads_count, 0).toLocaleString()}
+                            {isLoadingStats ? '...' : (statistics?.total_leads || 0).toLocaleString()}
                         </div>
                         <p className="text-xs text-muted-foreground">
                             Todos os tempos
@@ -361,7 +398,7 @@ const Campaigns = () => {
                     </CardHeader>
                     <CardContent>
                         <div className="text-2xl font-bold">
-                            {campaigns.length > 0 ? (campaigns.reduce((sum, c) => sum + parseFloat(c.conversion), 0) / campaigns.length).toFixed(1) : '0'}%
+                            {isLoadingStats ? '...' : statistics?.total_leads_conversion || '0%'}
                         </div>
                         <p className="text-xs text-muted-foreground">
                             Média geral
