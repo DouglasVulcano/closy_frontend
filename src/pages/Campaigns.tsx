@@ -13,6 +13,7 @@ import {
     Settings,
     ToggleLeft,
     ExternalLink,
+    Globe,
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -36,7 +37,7 @@ import {
 
 import { Link } from 'react-router-dom';
 import { campaignsService, CampaignFilters, CampaignStatistics } from '../services/campaigns.service';
-import { Campaign, PaginatedResponse } from '../types/api';
+import { Campaign, PaginatedResponse, SeoConfig } from '../types/api';
 import { DataPagination } from '../components/ui/data-pagination';
 import { CampaignsPageSkeleton } from '../components/skeletons';
 import { useToast } from '../hooks/use-toast';
@@ -44,6 +45,7 @@ import { useConfirm } from '../hooks/useConfirm';
 import { useDebounce } from '../hooks/useDebounce';
 import { CampaignStatusDialog } from '../components/campaigns/CampaignStatusDialog';
 import { CampaignModal, CampaignFormData } from '../components/campaigns/CampaignModal';
+import { SeoModal } from '../components/campaigns/SeoModal';
 
 type CampaignStatus = 'active' | 'paused' | 'draft' | 'completed';
 
@@ -60,6 +62,10 @@ const Campaigns = () => {
     const [isCampaignModalOpen, setIsCampaignModalOpen] = useState(false);
     const [editingCampaign, setEditingCampaign] = useState<Campaign | null>(null);
     const [isUploading, setIsUploading] = useState(false);
+
+    // Estados para o modal de SEO
+    const [isSeoModalOpen, setIsSeoModalOpen] = useState(false);
+    const [selectedCampaignForSeo, setSelectedCampaignForSeo] = useState<Campaign | null>(null);
 
     // Debounce da busca para evitar muitas requisições
     const debouncedSearchTerm = useDebounce(searchTerm, 1000);
@@ -322,6 +328,46 @@ const Campaigns = () => {
         setSelectedCampaignForStatus(null);
     };
 
+    // Funções para o modal de SEO
+    const handleOpenSeoModal = (campaign: Campaign) => {
+        setSelectedCampaignForSeo(campaign);
+        setIsSeoModalOpen(true);
+    };
+
+    const handleCloseSeoModal = () => {
+        setIsSeoModalOpen(false);
+        setSelectedCampaignForSeo(null);
+    };
+
+    const handleSaveSeo = async (seoConfig: SeoConfig) => {
+        if (!selectedCampaignForSeo) return;
+
+        try {
+            await campaignsService.updateCampaign(selectedCampaignForSeo.id, { seo: seoConfig });
+
+            // Atualizar a campanha na lista local
+            setCampaigns(prev => prev.map(campaign =>
+                campaign.id === selectedCampaignForSeo.id
+                    ? { ...campaign, seo: seoConfig }
+                    : campaign
+            ));
+
+            toast({
+                title: "SEO configurado",
+                description: `As configurações de SEO da campanha "${selectedCampaignForSeo.title}" foram salvas com sucesso.`,
+            });
+
+            handleCloseSeoModal();
+        } catch (error) {
+            console.error('Erro ao salvar configurações de SEO:', error);
+            toast({
+                title: "Erro",
+                description: "Não foi possível salvar as configurações de SEO.",
+                variant: "destructive",
+            });
+        }
+    };
+
     // Renderizar skeleton durante o loading
     if (isLoading) {
         return <CampaignsPageSkeleton />;
@@ -478,6 +524,11 @@ const Campaigns = () => {
                                                     </Link>
                                                 </DropdownMenuItem>
                                                 <DropdownMenuSeparator />
+                                                <DropdownMenuItem onClick={() => handleOpenSeoModal(campaign)}>
+                                                    <Globe className="mr-2 h-4 w-4" />
+                                                    SEO
+                                                </DropdownMenuItem>
+                                                <DropdownMenuSeparator />
                                                 <DropdownMenuItem
                                                     onClick={() => handleDelete(campaign.id)}
                                                     className="text-red-600 focus:text-red-600"
@@ -565,6 +616,16 @@ const Campaigns = () => {
                 />
             )}
 
+            {/* Modal de SEO */}
+            {selectedCampaignForSeo && (
+                <SeoModal
+                    isOpen={isSeoModalOpen}
+                    onClose={handleCloseSeoModal}
+                    onSave={handleSaveSeo}
+                    campaignTitle={selectedCampaignForSeo.title}
+                    initialData={selectedCampaignForSeo.seo}
+                />
+            )}
 
         </div>
     );

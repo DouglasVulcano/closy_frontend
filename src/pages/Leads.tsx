@@ -111,8 +111,8 @@ const Leads = () => {
   // Função para buscar campanhas
   const fetchCampaigns = useCallback(async () => {
     try {
-      const response = await campaignsService.getCampaigns();
-      setCampaigns(response.data);
+      const campaigns = await campaignsService.getAllCampaigns();
+      setCampaigns(campaigns);
     } catch (error) {
       console.error('Erro ao buscar campanhas:', error);
     }
@@ -341,11 +341,11 @@ const Leads = () => {
               </Select>
 
               <Select value={campaignFilter} onValueChange={setCampaignFilter}>
-                <SelectTrigger className="w-[160px]">
+                <SelectTrigger className="w-[220px]">
                   <SelectValue placeholder="Campanha" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all">Todas</SelectItem>
+                  <SelectItem value="all">Todas as campanhas</SelectItem>
                   {campaigns.map(campaign => (
                     <SelectItem key={campaign.id} value={campaign.id.toString()}>
                       {campaign.title}

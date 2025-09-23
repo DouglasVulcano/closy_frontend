@@ -6,6 +6,7 @@ import httpClient from './http-client';
 import type {
   Campaign,
   PaginatedResponse,
+  SeoConfig,
 } from '@/types/api';
 
 export interface CreateCampaignData {
@@ -20,6 +21,7 @@ export interface UpdateCampaignData {
   start_date?: string | null;
   end_date?: string | null;
   details?: unknown;
+  seo?: SeoConfig | null;
 }
 
 export interface CampaignFilters {
@@ -150,6 +152,13 @@ export class CampaignsService {
   async getActiveCampaigns(): Promise<Campaign[]> {
     const response = await this.getCampaigns({ status: 'active' });
     return response.data;
+  }
+
+  /**
+   * Obter todas as campanhas do usuário (sem paginação)
+   */
+  async getAllCampaigns(): Promise<Campaign[]> {
+    return httpClient.get<Campaign[]>('/campaign/all');
   }
 
   /**

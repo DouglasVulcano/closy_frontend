@@ -34,46 +34,46 @@ const App = () => (
           </div>}>
             <Routes>
               {/* Rotas públicas */}
-              <Route 
-                path="/login" 
+              <Route
+                path="/login"
                 element={
                   <PublicRoute>
                     <Login />
                   </PublicRoute>
-                } 
+                }
               />
-              <Route 
-                path="/register" 
+              <Route
+                path="/register"
                 element={
                   <PublicRoute>
                     <Register />
                   </PublicRoute>
-                } 
+                }
               />
-              
+
               {/* Rota de seleção de planos - apenas para usuários com role USER */}
-              <Route 
-                path="/plans" 
+              <Route
+                path="/plans"
                 element={
                   <ProtectedRoute requiredRoles={['USER']}>
                     <Plans />
                   </ProtectedRoute>
-                } 
+                }
               />
-              
+
               {/* Editor de campanhas - protegido para roles pagas */}
-              <Route 
-                path="campaigns/edit/:id" 
+              <Route
+                path="campaigns/edit/:id"
                 element={
                   <ProtectedRoute requiredRoles={['STARTER', 'PRO', 'ADMIN']}>
                     <LeadCaptureBuilder />
                   </ProtectedRoute>
-                } 
+                }
               />
-              
+
               {/* Rotas principais com layout - protegidas para roles pagas */}
-              <Route 
-                path="/" 
+              <Route
+                path="/"
                 element={
                   <ProtectedRoute requiredRoles={['STARTER', 'PRO', 'ADMIN']}>
                     <AppLayout />
@@ -86,7 +86,7 @@ const App = () => (
                 <Route path="leads" element={<Leads />} />
                 <Route path="profile" element={<Profile />} />
               </Route>
-              
+
               {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
               <Route path="*" element={<NotFound />} />
             </Routes>

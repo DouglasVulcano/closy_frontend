@@ -130,6 +130,20 @@ export interface PresignedUrlResponse {
 }
 
 // Campaign related types
+export interface SeoConfig {
+  title?: string;
+  description?: string;
+  keywords?: string;
+  og_title?: string;
+  og_description?: string;
+  og_image?: string;
+  twitter_title?: string;
+  twitter_description?: string;
+  twitter_image?: string;
+  canonical_url?: string;
+  robots?: string;
+}
+
 export interface Campaign {
   id: number;
   user_id: number;
@@ -139,6 +153,7 @@ export interface Campaign {
   end_date: string | null;
   status: 'draft' | 'active' | 'paused' | 'completed';
   details: unknown | null;
+  seo?: SeoConfig | null;
   created_at: string;
   updated_at: string;
   leads_count: number;

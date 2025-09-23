@@ -60,15 +60,6 @@ export class AuthService {
   }
 
   /**
-   * Obter URL do portal de cobrança
-   */
-  async getPortalUrl(returnUrl?: string): Promise<string> {
-    const data: PortalRequest = returnUrl ? { return_url: returnUrl } : {};
-    const response = await httpClient.post<PortalResponse>('/portal', data);
-    return response.portal_url;
-  }
-
-  /**
    * Solicitar redefinição de senha
    */
   async requestPasswordReset(email: string): Promise<void> {
